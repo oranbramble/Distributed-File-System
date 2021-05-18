@@ -1,6 +1,8 @@
+package DStore;
 
 import java.io.*;
 import java.net.Socket;
+import ConnectionParent.*;
 
 public class dStoreToControllerConnection extends ConnectionParent{
 
@@ -12,5 +14,6 @@ public class dStoreToControllerConnection extends ConnectionParent{
 
     public dStoreToControllerConnection(Socket s) throws IOException {
         super(s);
+        this.outText.println();
     }
 }

@@ -1,5 +1,8 @@
+package DStore;
+
 import java.io.*;
 import java.net.Socket;
+import ConnectionParent.*;
 
 public class dStoreClientConnection extends ConnectionParent{
 

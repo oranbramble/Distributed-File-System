@@ -1,17 +1,19 @@
+package Tokenizer;
+
 import java.util.StringTokenizer;
 
 /**
  * A scanner and parser for requests.
  */
 
-class Tokenizer {
+public class Tokenizer {
 
     public Tokenizer() { ; }
 
     /**
      * Parses requests.
      */
-    Token getToken(String command) {
+    public Token getToken(String command) {
         StringTokenizer sTokenizer = new StringTokenizer(command);
         if (!(sTokenizer.hasMoreTokens()))
             //Originally nulljava
@@ -27,23 +29,9 @@ class Tokenizer {
     }
 }
 
-/**
- * The Token Prototype.
- */
-abstract class Token {
-    String command;
-}
 
-/**
- * Syntax: JOIN &lt;name&gt;
- */
-class JoinToken extends Token {
-    int port;
-    JoinToken(String command, int port) {
-        this.command = command;
-        this.port = port;
-    }
-}
+
+
 
 
 
