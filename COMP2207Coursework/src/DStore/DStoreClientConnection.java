@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import ConnectionParent.*;
 
-public class dStoreClientConnection extends ConnectionParent{
+public class DStoreClientConnection extends ConnectionParent{
 
     private Socket socket;
     private PrintWriter outText;
@@ -12,7 +12,7 @@ public class dStoreClientConnection extends ConnectionParent{
     private OutputStream outData;
     private InputStream inData;
 
-    public dStoreClientConnection(Socket s) throws IOException {
+    public DStoreClientConnection(Socket s) throws IOException {
         super(s);
     }
 }

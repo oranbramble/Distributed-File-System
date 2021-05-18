@@ -1,10 +1,11 @@
-package DStore;
+package Controller;
 
+import ConnectionParent.ConnectionParent;
+import Tokenizer.Token;
 import java.io.*;
 import java.net.Socket;
-import ConnectionParent.*;
 
-public class dStoreToControllerConnection extends ConnectionParent{
+public class ControllerClientConnection extends ConnectionParent {
 
     private Socket socket;
     private PrintWriter outText;
@@ -12,8 +13,7 @@ public class dStoreToControllerConnection extends ConnectionParent{
     private OutputStream outData;
     private InputStream inData;
 
-    public dStoreToControllerConnection(Socket s) throws IOException {
+    public ControllerClientConnection(Socket s, Token t) throws IOException {
         super(s);
-        this.outText.println();
     }
 }

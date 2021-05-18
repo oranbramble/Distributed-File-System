@@ -3,14 +3,13 @@ package DStore;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.stream.Stream;
 
 public class DStore {
 
     private int port;
     private int timeout;
     private String fileFolder;
-    private dStoreToControllerConnection controllerConnection;
+    private DStoreToControllerConnection controllerConnection;
 
     public DStore(int port, int cPort, int timeout, String fileFolder) {
         this.port = port;
@@ -20,7 +19,7 @@ public class DStore {
         //Sets up connection to controller, and then starts listening for client connections
         try {
             controllerSocket = new Socket("LAPTOP-VM9CS5EI", cPort);
-            this.controllerConnection = new dStoreToControllerConnection(controllerSocket);
+            this.controllerConnection = new DStoreToControllerConnection(controllerSocket, this.port);
             this.startListening();
         } catch (IOException e) {
             System.out.println("### DSTORE ERROR ###    TCP Connection to Controller failed");

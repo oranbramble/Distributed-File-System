@@ -4,9 +4,10 @@ package Tokenizer;
  * Syntax: JOIN
  */
 public class JoinToken extends Token {
-    int port;
-    JoinToken(String command, int port) {
-        this.command = command;
+    public int port;
+
+    JoinToken(String req, int port) {
+        this.req = req;
         this.port = port;
     }
 }

@@ -18,7 +18,8 @@ public class Controller {
     private int rebalancePeriod;
     //Stores names of files for index/concurrency
     private Map<String,Enumeration> files;
-    private ArrayList<controllerToDStoreConnection> dStores;
+    private ArrayList<ControllerToDStoreConnection> dStores;
+    private ArrayList<ControllerClientConnection> clients;
 
     public Controller(int cPort, int R, int timeout, int rebalancePeriod) {
         this.cPort = cPort;
@@ -49,10 +50,12 @@ public class Controller {
                 in = new BufferedReader(new InputStreamReader(s.getInputStream()));
                 line = in.readLine();
                 Token token = t.getToken(line);
+                //We tokenize the first command received. IF it is a JOIN command, we know the connection is to
+                //a DStore, if not then it must be a client
                 if (token instanceof JoinToken) {
-                    this.dStores.add(new controllerToDStoreConnection(s));
+                    this.dStores.add(new ControllerToDStoreConnection(s, ((JoinToken)token).port));
                 } else if (token != null) {
-
+                    this.clients.add(new ControllerClientConnection(s, token));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
