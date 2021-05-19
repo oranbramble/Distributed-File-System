@@ -2,8 +2,6 @@ package Tokenizer;
 
 import Loggers.Protocol;
 
-import javax.sound.sampled.ReverbType;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -15,6 +13,7 @@ import java.util.StringTokenizer;
 public class Tokenizer {
 
     public Tokenizer() { ; }
+
 
     /**
      * Parses requests.
@@ -127,17 +126,102 @@ public class Tokenizer {
             }
         }
 
+        //Matches the "REBALANCE ...' command (see method for conversion to token)
         if (firstToken.equals(Protocol.REBALANCE_TOKEN)) {
             return generateRebalanceToken(sTokenizer, command);
         }
 
+        //Matches 'ERROR_FILE_DOES_NOT_EXIST' and 'ERROR_FILE_DOES_NOT_EXIST filename' errors
+        if (firstToken.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) {
+            if (sTokenizer.countTokens() == 1) {
+                return new FileNotExistFilenameToken(command, sTokenizer.nextToken());
+            } else  if (sTokenizer.countTokens() == 0){
+                return new FileNotExistToken(command);
+            } else {
+                return null;
+            }
+        }
 
+        //Matches 'ERROR_FILE_ALREADY_EXISTS' error, generating FileAlreadyExistsToken
+        if (firstToken.equals(Protocol.ERROR_FILE_ALREADY_EXISTS_TOKEN)) {
+            if (!(sTokenizer.hasMoreTokens())) {
+                return new FileAlreadyExistsToken(command);
+            } else {
+                return null;
+            }
+        }
 
+        //Matches 'ERROR_NOT_ENOUGH_DSTORES' error, generating NotEnoughDStoresToken
+        if (firstToken.equals(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN)) {
+            if (!(sTokenizer.hasMoreTokens())) {
+                return new NotEnoughDStoresToken(command);
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'ERROR_LOAD' error, generating ErrorLoadToken
+        if (firstToken.equals(Protocol.ERROR_LOAD_TOKEN)) {
+            if (!(sTokenizer.hasMoreTokens())) {
+                return new ErrorLoadToken(command);
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'ACK' acknowledgement, generating ErrorLoadToken
+        if (firstToken.equals(Protocol.ACK_TOKEN)) {
+            if (!(sTokenizer.hasMoreTokens())) {
+                return new AckToken(command);
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'STORE_ACK filename' acknowledgement, generating StoreAckToken
+        if (firstToken.equals(Protocol.STORE_ACK_TOKEN)) {
+            if (sTokenizer.countTokens() == 1) {
+                return new StoreAckToken(command, sTokenizer.nextToken());
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'REMOVE_ACK filename' acknowledgement, generating RemoveAckToken
+        if (firstToken.equals(Protocol.REMOVE_ACK_TOKEN)) {
+            if (sTokenizer.countTokens() == 1) {
+                return new RemoveAckToken(command, sTokenizer.nextToken());
+            } else {
+                return null;
+            }
+        }
 
         //Matches 'JOIN port' command, generating JoinToken
         if (firstToken.equals(Protocol.JOIN_TOKEN)) {
             if (sTokenizer.hasMoreTokens()) {
                 return new JoinToken(command, Integer.parseInt(sTokenizer.nextToken()));
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'REBALANCE_STORE filename filesize' command, generating RebalanceStoreToken
+        if (firstToken.equals(Protocol.REBALANCE_STORE_TOKEN)) {
+            if (sTokenizer.countTokens() == 2) {
+                try {
+                    return new RebalanceStoreToken(command, sTokenizer.nextToken(), Integer.parseInt(sTokenizer.nextToken()));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+
+        //Matches 'REBALANCE_COMPLETE' acknowledgement, generating RebalanceCompleteToken
+        if (firstToken.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) {
+            if (!(sTokenizer.hasMoreTokens())) {
+                return new RebalanceCompleteToken(command);
             } else {
                 return null;
             }
@@ -192,27 +276,6 @@ public class Tokenizer {
         } catch (NumberFormatException | NoSuchElementException e) {
             return null;
         }
-    }
-
-    public static void main(String[] args) {
-        Tokenizer t = new Tokenizer();
-       // Token j = t.getToken("JOIN 4000");
-       // Token l = t.getToken("LIST x y z f");
-       // System.out.println(((JoinToken)j).port + "    " + l.req + ": " + ((FileListToken)l).fileList);
-       // StoreToken s = (StoreToken)t.getToken("STORE a 300");
-       // System.out.println(s.filename + " " + s.filesize );
-       //   LoadToken l = (LoadToken)t.getToken("LOAD aaa.txt aaaa");
-        //  System.out.println(l);
-       // StoreToToken s = (StoreToToken)t.getToken("STORE_TO a 2 3");
-       // System.out.println(s.ports);
-      //  LoadFromToken l = (LoadFromToken)t.getToken("LOAD_FROM 1 2");
-      //  System.out.println(l.filesize + " " + l.port);
-        RebalanceToken r = (RebalanceToken)t.getToken("REBALANCE 3 f1 2 100 200 f2 1 300 f5 10 1 2 3 4 5 6 7 8 9 10 2 f2 fffff");
-        System.out.println(r);
-        //System.out.println(r.numberOfFilesToSend + " " + r.filesToSend + " " + r.numberOfFilesToRemove + " " + r.filesToRemove);
-        //for (FileToSend f : r.filesToSend) {
-       //     System.out.println(f.filename + " " + f.numberOfDStores + " " + f.dStores);
-       // }
     }
 }
 

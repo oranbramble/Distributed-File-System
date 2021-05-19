@@ -5,11 +5,11 @@ import java.net.Socket;
 
 public class ConnectionParent {
 
-    private Socket socket;
-    private PrintWriter outText;
-    private BufferedReader inText;
-    private OutputStream outData;
-    private InputStream inData;
+    protected Socket socket;
+    protected PrintWriter outText;
+    protected BufferedReader inText;
+    protected OutputStream outData;
+    protected InputStream inData;
 
     public ConnectionParent(Socket s) throws IOException {
         this.socket = s;

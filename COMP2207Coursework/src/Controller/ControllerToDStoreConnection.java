@@ -9,11 +9,6 @@ import ConnectionParent.*;
  */
 public class ControllerToDStoreConnection extends ConnectionParent{
 
-    private Socket socket;
-    private PrintWriter outText;
-    private BufferedReader inText;
-    private OutputStream outData;
-    private InputStream inData;
     public int dStorePort;
 
     public ControllerToDStoreConnection(Socket s, int port) throws IOException {
