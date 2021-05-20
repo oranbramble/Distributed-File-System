@@ -6,7 +6,11 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
+
+import Loggers.ControllerLogger;
+import Loggers.Logger;
 import Tokenizer.*;
 
 
@@ -16,18 +20,22 @@ public class Controller {
     private int R;
     private int timeout;
     private int rebalancePeriod;
-    //Stores names of files for index/concurrency
-    private Map<String,Enumeration> files;
-    private ArrayList<ControllerToDStoreConnection> dStores;
-    private ArrayList<ControllerClientConnection> clients;
+    private int expectedAcks;
 
-    public Controller(int cPort, int R, int timeout, int rebalancePeriod) {
+    private ArrayList<Integer> dStores;
+    private ArrayList<String> files;
+
+    public Controller(int cPort, int R, int timeout, int rebalancePeriod) throws IOException {
         this.cPort = cPort;
         this.R = R;
         this.timeout = timeout;
         this.rebalancePeriod = rebalancePeriod;
-        this.files = Collections.synchronizedMap(new HashMap<>());
+        this.expectedAcks = 0;
+
         this.dStores = new ArrayList<>();
+        this.files = new ArrayList<>();
+
+        ControllerLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY);
     }
 
     public void startListening() throws IOException {
@@ -40,28 +48,66 @@ public class Controller {
         }
     }
 
-    private void startConnection(Socket s){
-        new Thread(() -> {
-            BufferedReader in = null;
-            Tokenizer t = new Tokenizer();
-            String line = null;
+    private void startConnection(Socket s) throws IOException{
+        //Sets up input stream, waits for first message to be send
+        //When message receiver, logs the message and tokenizes it
+        BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        String line = in.readLine();
+        ControllerLogger.getInstance().messageReceived(s, line);
+        Token token = Tokenizer.getToken(line);
 
+        //We tokenize the first command received. IF it is a JOIN command, we know the connection is to
+        //a DStore, if not then it must be a client
+        if (token instanceof JoinToken) {
+            //If Dstore joining, log the join and save the port
+            int DstorePort = ((JoinToken) token).port;
+            ControllerLogger.getInstance().dstoreJoined(s, DstorePort);
+            this.dStores.add(DstorePort);
+
+        } else if (token instanceof StoreAckToken) {
+            this.expectedAcks -= 1;
+
+        } else if (token != null) {
+            //If its a client request, create a new connection thread to handle that
+            //request and further requests from that client
+            new ControllerClientConnection(s, token, this).start();
+        }
+    }
+
+    public String getFileList() {
+        return "File1 File2 File3";
+    }
+
+
+    public String getPortsForStore(String filename) {
+        try {
+            StringBuilder portsToSend = new StringBuilder();
+            for (int x = 0; x < this.R; x++) {
+                int port = this.dStores.get(x);
+                portsToSend.append(" ").append(port);
+            }
+            return portsToSend.toString();
+
+        } catch (NullPointerException e) {
+            System.out.println("### STORE ERROR ###");
+            return "";
+        }
+    }
+
+    public void storeAckChecker(String filename) {
+        while (this.expectedAcks != 0) {
+            System.out.println(this.expectedAcks);
             try {
-                in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                line = in.readLine();
-                Token token = t.getToken(line);
-                //We tokenize the first command received. IF it is a JOIN command, we know the connection is to
-                //a DStore, if not then it must be a client
-                if (token instanceof JoinToken) {
-                    this.dStores.add(new ControllerToDStoreConnection(s, ((JoinToken)token).port));
-                } else if (token != null) {
-                    this.clients.add(new ControllerClientConnection(s, token));
-                }
-            } catch (IOException e) {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+        this.files.add(filename);
+    }
 
-        }).start();
+    public void setExpectedAcks(int acksExpected) {
+        this.expectedAcks = acksExpected;
     }
 
     /** Args layout:

@@ -18,7 +18,7 @@ public class Tokenizer {
     /**
      * Parses requests.
      */
-    public Token getToken(String command) {
+    public static Token getToken(String command) {
         StringTokenizer sTokenizer = new StringTokenizer(command);
         if (!(sTokenizer.hasMoreTokens()))
             return null;
@@ -240,7 +240,7 @@ public class Tokenizer {
      * @param command:
      * @return
      */
-    private RebalanceToken generateRebalanceToken(StringTokenizer s, String command) {
+    private static RebalanceToken generateRebalanceToken(StringTokenizer s, String command) {
         try {
             ArrayList<FileToSend> filesToSend = new ArrayList<>();
             ArrayList<String> filesToRemove = new ArrayList<>();

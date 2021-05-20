@@ -1,9 +1,11 @@
 package ConnectionParent;
 
+import Tokenizer.Tokenizer;
+
 import java.io.*;
 import java.net.Socket;
 
-public class ConnectionParent {
+public class ConnectionParent extends Thread{
 
     protected Socket socket;
     protected PrintWriter outText;
@@ -13,7 +15,7 @@ public class ConnectionParent {
 
     public ConnectionParent(Socket s) throws IOException {
         this.socket = s;
-        this.outText = new PrintWriter(s.getOutputStream());
+        this.outText = new PrintWriter(new BufferedOutputStream(s.getOutputStream()));
         this.inText = new BufferedReader(new InputStreamReader(s.getInputStream()));
         this.outData = new BufferedOutputStream(s.getOutputStream());
         this.inData = new BufferedInputStream(s.getInputStream());

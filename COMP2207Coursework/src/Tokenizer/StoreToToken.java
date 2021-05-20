@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 public class StoreToToken extends Token{
-    ArrayList<Integer> ports;
+    public ArrayList<Integer> ports;
 
     public StoreToToken(String req, StringTokenizer stringTokenizer) {
         this.req = req;
