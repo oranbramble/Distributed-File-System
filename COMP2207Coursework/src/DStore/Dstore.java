@@ -14,6 +14,7 @@ public class Dstore {
     private int port;
     private int timeout;
     private File fileFolder;
+    private DstoreToControllerConnection controllerConnection;
 
     public Dstore(int port, int cPort, int timeout, String fileFolder) throws IOException {
         this.port = port;
@@ -23,7 +24,7 @@ public class Dstore {
 
         DstoreLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY, this.port);
 
-        //Tries to join controller, and then starts listening for other connections
+        //Tries to join controller and set up connection with it, and then starts listening for other connections
         try {
             Socket controllerSocket = new Socket(InetAddress.getLocalHost(), cPort);
             this.joinController(controllerSocket);
@@ -34,18 +35,14 @@ public class Dstore {
     }
 
     private void joinController(Socket s) throws IOException {
-        PrintWriter outText =  new PrintWriter(new BufferedOutputStream(s.getOutputStream()));
-        String joinMsg = Protocol.JOIN_TOKEN + " " + this.port;
-        outText.println(joinMsg);
-        outText.flush();
-        DstoreLogger.getInstance().messageSent(s, joinMsg);
+        this.controllerConnection = new DstoreToControllerConnection(s, this.port, this);
     }
 
     private void startListening(int cPort) throws IOException {
         ServerSocket listener = new ServerSocket(this.port);
         while (true) {
             Socket connection = listener.accept();
-            new DstoreConnection(connection, this, cPort).start();
+            new DstoreClientConnection(connection, this, cPort, this.timeout).start();
         }
     }
 
@@ -58,6 +55,10 @@ public class Dstore {
         } catch (IOException e) {
             System.out.println("### ERROR ###   Cannot write data to filename " + filename);
         }
+    }
+
+    public void sendAckToController(String ack) {
+        this.controllerConnection.sendAckToController(ack);
     }
 
 
