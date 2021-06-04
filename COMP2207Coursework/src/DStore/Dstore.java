@@ -8,6 +8,8 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Dstore {
 
@@ -22,7 +24,7 @@ public class Dstore {
         this.fileFolder = new File(fileFolder);
         this.fileFolder.mkdir();
 
-        DstoreLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY, this.port);
+      //  DstoreLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY, this.port);
 
         //Tries to join controller and set up connection with it, and then starts listening for other connections
         try {
@@ -52,13 +54,25 @@ public class Dstore {
             FileWriter writer = new FileWriter(f);
             writer.write(data);
             writer.flush();
+            writer.close();
         } catch (IOException e) {
             System.out.println("### ERROR ###   Cannot write data to filename " + filename);
         }
     }
 
+    public boolean removeFile(String filename) {
+        File f = new File(fileFolder + "\\" + filename);
+        try {
+            Files.delete(Paths.get(f.getAbsolutePath()));
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public void sendAckToController(String ack) {
-        this.controllerConnection.sendAckToController(ack);
+        this.controllerConnection.sendMessageToController(ack);
     }
 
 

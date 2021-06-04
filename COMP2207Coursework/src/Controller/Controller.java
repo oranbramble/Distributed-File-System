@@ -6,11 +6,13 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import IndexManager.*;
 import Loggers.ControllerLogger;
 import Loggers.Logger;
+import Loggers.Protocol;
 import Tokenizer.*;
 
 
@@ -22,11 +24,8 @@ public class Controller {
     private int rebalancePeriod;
 
     private IndexManager fileIndex;
-
     private Map<Integer, ControllerToDStoreConnection> dStoreConnectionMap;
-
     private ArrayList<ControllerToDStoreConnection> dStores;
-    private ArrayList<String> files;
 
     public Controller(int cPort, int R, int timeout, int rebalancePeriod) throws IOException {
         this.cPort = cPort;
@@ -37,7 +36,6 @@ public class Controller {
         this.fileIndex = new IndexManager();
 
         this.dStores = new ArrayList<>();
-        this.files = new ArrayList<>();
 
         ControllerLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY);
     }
@@ -78,8 +76,17 @@ public class Controller {
         }
     }
 
+    /**
+     * Method which gets all files currently stored on the system
+     * Only includes files which are fully stored (not in the process of being stored)
+     * @return
+     */
     public String getFileList() {
-        return this.files.toString();
+        StringBuilder s = new StringBuilder();
+        for (String file : this.fileIndex.getStoredFiles()) {
+            s.append(" ").append(file);
+        }
+        return s.toString();
     }
 
     public boolean checkEnoughDstores() {
@@ -88,6 +95,7 @@ public class Controller {
 
     public void removeDstore(ControllerToDStoreConnection connection) {
         this.dStores.remove(connection);
+        this.dStoreConnectionMap.remove(connection.getDstorePort());
         this.fileIndex.removeDstore(connection.getDstorePort());
     }
 
@@ -113,24 +121,47 @@ public class Controller {
 
     public boolean updateIndex(String filename, File.State s) {
         if (s == File.State.STORE_IN_PROGRESS) {
-            return this.fileIndex.addFileToIndex(filename);
+            return this.fileIndex.startStoring(filename);
+        } else if (s == File.State.REMOVE_IN_PROGRESS) {
+            return this.fileIndex.startRemoving(filename);
         }
         return false;
     }
 
-    public boolean addExpectedAcks(ArrayList<Integer> ports, String filename) {
+    /**
+     * Method to add the ports we expect acknowledgements back from to the index manager
+     * We specify which acks we are waiting for based on the token passed in (req)
+     * @param ports: ports we expect acks from
+     * @param filename: name of file to expect acks for
+     * @param req: token for what operation we are doing (store or remove)
+     * @return true if acks are added successfully, false if not
+     */
+    public boolean addExpectedAcks(ArrayList<Integer> ports, String filename, Token req) {
         try {
-            this.fileIndex.addExpectedAcksForFile(filename, ports);
-            return true;
+            if (req instanceof StoreToken) {
+                this.fileIndex.addStoreAcksForFile(filename, ports);
+                return true;
+            } else if (req instanceof RemoveToken) {
+                this.fileIndex.addRemoveAcksForFile(filename, ports);
+                return true;
+            } else {
+                return false;
+            }
         } catch (NumberFormatException e) {
             System.out.println("### ERROR ###   Cannot parse ports as integers : " + ports.toString());
             return false;
         }
     }
 
-    public boolean ifStoreAcksReceived(String filename,ArrayList<Integer> ports) {
-        if (this.fileIndex.listenForAcks(filename, this.timeout, ports)) {
-            this.fileIndex.changeState(filename, File.State.AVAILABLE);
+    /**
+     * Method which checks if all store acks are received by calling method in index manager
+     * which waits to see if all acks are received (before timeout)
+     * @param filename: Name of file that we are waiting for acks for
+     * @param ports: List of port numbers we expect acks from
+     * @return
+     */
+    public boolean ifAllStoreAcksReceived(String filename,ArrayList<Integer> ports) {
+        if (this.fileIndex.listenForStoreAcks(filename, this.timeout, ports)) {
             return true;
         } else {
             this.fileIndex.removeFileFromIndex(filename);
@@ -138,9 +169,49 @@ public class Controller {
         }
     }
 
+    /**
+     * Method which handles receiving a store acknowledgement from Dstore (just tells index manager that ack
+     * has been received)
+     * @param t
+     * @param port
+     */
     public void storeAckReceived(StoreAckToken t, Integer port) {
         if (!this.fileIndex.storeAckReceived(t, port)) {
             System.out.println("### ERROR ###   Invalid STORE_ACK received from port " + port);
+        }
+    }
+
+    public void removeAckReceived(RemoveAckToken t, Integer port) {
+        if (!this.fileIndex.removeAckReceived(t, port)) {
+            System.out.println("### ERROR ###   Invalid REMOVE_ACK received from port " + port);
+        }
+    }
+
+    /**
+     * Method which oversees removing a file from the Dstores and index (basically carries out the remove operation)
+     * @param filename
+     * @param req
+     * @param connection
+     */
+    public void removeFile(String filename, Token req, ControllerClientConnection connection) {
+        ArrayList<Integer> ports = this.fileIndex.getDstoresStoringFile(filename);
+
+        //Sends the Dstore the remove instruction
+        //Done in a new thread so that we are listening for remove acknowledgements immediately
+        //Otherwise, could miss an ack because we are still telling other Dstores to remove the file
+        //Could potentially cause issues with timeouts if there are large number of Dstores
+
+        for (Integer port : ports) {
+            new Thread(() -> this.dStoreConnectionMap.get(port).removeFile(filename)).start();
+        }
+
+
+        //If added acks successfully
+        if (this.addExpectedAcks(ports, filename, req)) {
+            //If we receive all remove acks
+            if (this.fileIndex.listenForRemoveAcks(filename, this.timeout, ports)) {
+                connection.sendToClient(new RemoveCompleteToken(null), Protocol.REMOVE_COMPLETE_TOKEN);
+            }
         }
     }
 

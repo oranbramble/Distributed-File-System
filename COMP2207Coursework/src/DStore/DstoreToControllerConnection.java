@@ -5,8 +5,7 @@ import java.net.Socket;
 import ConnectionParent.*;
 import Loggers.DstoreLogger;
 import Loggers.Protocol;
-import Tokenizer.Token;
-import Tokenizer.Tokenizer;
+import Tokenizer.*;
 
 public class DstoreToControllerConnection extends ConnectionParent{
 
@@ -57,12 +56,20 @@ public class DstoreToControllerConnection extends ConnectionParent{
     }
 
     private void handleRequest(Token reqToken) {
-
+        if (reqToken instanceof RemoveToken) {
+            String filename = ((RemoveToken)reqToken).filename;
+            boolean ifDeleted = this.dstore.removeFile(filename);
+            if (ifDeleted) {
+                this.sendMessageToController(Protocol.REMOVE_ACK_TOKEN + " " + filename);
+            } else {
+                this.sendMessageToController(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN + " " + filename);
+            }
+        }
     }
 
-    public void sendAckToController(String ack) {
-        this.outText.println(ack);
+    public void sendMessageToController(String msg) {
+        this.outText.println(msg);
         this.outText.flush();
-        DstoreLogger.getInstance().messageSent(this.socket, ack);
+        DstoreLogger.getInstance().messageSent(this.socket, msg);
     }
 }
