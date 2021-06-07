@@ -1,11 +1,13 @@
 package Client;
 
+import Loggers.Protocol;
 import Tokenizer.Token;
 import Tokenizer.*;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Client {
@@ -36,6 +38,8 @@ public class Client {
             this.list(in);
         } else if (t instanceof  RemoveToken) {
             this.remove(in);
+        } else if (t instanceof LoadToken) {
+            this.load(t,in,out);
         }
 
         out.close();
@@ -56,8 +60,54 @@ public class Client {
         System.out.println("RECEIVED : " + t);
     }
 
+    private void load(Token t, BufferedReader in, PrintWriter out) {
+        String command = "";
+        String filename = ((LoadToken)t).filename;
+        try {
+            command = in.readLine();
+            System.out.println("RECEIVED : " + command);
+        } catch (IOException e) {
+            System.out.println("### ERROR ###   Cannot read from controller");
+            return;
+        }
+        Token cToken = Tokenizer.getToken(command);
+        if (cToken instanceof LoadFromToken) {
+            int filesize = ((LoadFromToken)cToken).filesize;
+            int port = ((LoadFromToken)cToken).port;
+            try {
+                Socket dStoreSocket = new Socket(InetAddress.getLocalHost(), port);
+                PrintWriter outText = new PrintWriter(new BufferedOutputStream(dStoreSocket.getOutputStream()));
+                InputStream inData = dStoreSocket.getInputStream();
+                outText.println(Protocol.LOAD_DATA_TOKEN + " " + filename);
+                outText.flush();
+                System.out.println("SENDING : " + Protocol.LOAD_DATA_TOKEN + " " + filename);
+                byte[] data = inData.readNBytes(filesize);
+                System.out.println("RECEIVED : " + Arrays.toString(data));
+                if (data.length == filesize) {
+                    File f = new File(filename);
+                    FileOutputStream w = new FileOutputStream(f);
+                    w.write(data);
+                    w.close();
+                    System.out.println("LOAD OF " + filename + " COMPLETE");
+                } else {
+                    out.println(Protocol.RELOAD_TOKEN + " " + filename);
+                    out.flush();
+                    System.out.println("SENDING : " + Protocol.RELOAD_TOKEN + " " + filename);
+                    this.load(t,in,out);
+               }
+            } catch (IOException e) {
+                System.out.println("ERRRRR : " + e);
+                out.println(Protocol.RELOAD_TOKEN + " " + filename);
+                out.flush();
+                System.out.println("SENDING : " + Protocol.RELOAD_TOKEN + " " + filename);
+                this.load(t,in,out);
+            }
+        } else {
+            System.out.println("LOAD OF " + filename + " FAILED");
+        }
+    }
 
-    public void store(String input, Token token1, BufferedReader in) throws IOException {
+    private void store(String input, Token token1, BufferedReader in) throws IOException {
         StoreToken outputtedT = (StoreToken)token1;
 
         String line = in.readLine();
@@ -84,6 +134,7 @@ public class Client {
                     assert sentToken != null;
                     File f = new File(sentToken.filename);
                     FileInputStream reader = new FileInputStream(f);
+                    System.out.println("FILESIZE : " + sentToken.filesize);
                     byte[] fileContent = reader.readNBytes(sentToken.filesize);
 
                     System.out.println("SENT FILE : " + fileContent + ", LENGTH : " + fileContent.length);

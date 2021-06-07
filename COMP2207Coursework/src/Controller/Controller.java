@@ -1,12 +1,15 @@
 package Controller;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.PortUnreachableException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import IndexManager.*;
@@ -15,6 +18,8 @@ import Loggers.Logger;
 import Loggers.Protocol;
 import Tokenizer.*;
 
+import javax.sound.sampled.ReverbType;
+
 
 public class Controller {
 
@@ -22,7 +27,10 @@ public class Controller {
     private int R;
     private int timeout;
     private int rebalancePeriod;
+    private volatile boolean ifRebalancing;
+    private ArrayList<Token> queuedRequests;
 
+    private Rebalancer rebalancer;
     private IndexManager fileIndex;
     private Map<Integer, ControllerToDStoreConnection> dStoreConnectionMap;
     private ArrayList<ControllerToDStoreConnection> dStores;
@@ -34,13 +42,23 @@ public class Controller {
         this.rebalancePeriod = rebalancePeriod;
         this.dStoreConnectionMap = Collections.synchronizedMap(new HashMap<>());
         this.fileIndex = new IndexManager();
-
         this.dStores = new ArrayList<>();
+        this.queuedRequests = new ArrayList<>();
 
         ControllerLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY);
     }
 
     public void startListening() throws IOException {
+        //Starts thread which handles the rebalancing every x seconds
+        final double[] startTime = {System.currentTimeMillis()};
+        new Thread(() -> {
+            while (true) {
+                if (startTime[0] + this.rebalancePeriod < System.currentTimeMillis()) {
+                    this.beginRebalance();
+                    startTime[0] = System.currentTimeMillis();
+                }
+            }
+        }).start();
         ServerSocket listener = new ServerSocket(this.cPort);
         //Listens for any connection attempted by Dstopre or Client
         while (true) {
@@ -57,6 +75,17 @@ public class Controller {
         ControllerLogger.getInstance().messageReceived(s, line);
         Token token = Tokenizer.getToken(line);
 
+        if (this.ifRebalancing) {
+            this.queuedRequests.add(token);
+        } else {
+            for (Token req : this.queuedRequests) {
+                this.handleFirstRequest(req, s);
+            }
+            this.handleFirstRequest(token, s);
+        }
+    }
+
+    private void handleFirstRequest(Token token, Socket s) throws IOException {
         //We tokenize the first command received. Then run checks on it to see what type of request it is.
         //If its a JOIN, we know the connection is a Dstore trying to join for the first time
         //If its none of these, it must be a client request.
@@ -68,7 +97,6 @@ public class Controller {
             this.dStores.add(dstoreConnection);
             this.dStoreConnectionMap.put(dstorePort, dstoreConnection);
 
-
         } else if (token != null) {
             //If its a client request, create a new connection thread to handle that
             //request and further requests from that client
@@ -76,27 +104,137 @@ public class Controller {
         }
     }
 
-    /**
-     * Method which gets all files currently stored on the system
-     * Only includes files which are fully stored (not in the process of being stored)
-     * @return
-     */
-    public String getFileList() {
-        StringBuilder s = new StringBuilder();
-        for (String file : this.fileIndex.getStoredFiles()) {
-            s.append(" ").append(file);
+    private void beginRebalance() {
+        if (!this.ifRebalancing) {
+            //Waits for all files to be available before starting the rebalance operation
+            while (!this.fileIndex.checkIfAllAvailable()) {}
+            this.ifRebalancing = true;
+            this.rebalancer = new Rebalancer(this.timeout);
+            this.rebalancer.rebalance(this.fileIndex.getFileObjects(),this.dStoreConnectionMap);
+            this.ifRebalancing = false;
         }
-        return s.toString();
+    }
+
+    public boolean getIfRebalancing() {
+        return this.ifRebalancing;
     }
 
     public boolean checkEnoughDstores() {
         return this.dStores.size() >= this.R;
     }
 
-    public void removeDstore(ControllerToDStoreConnection connection) {
-        this.dStores.remove(connection);
-        this.dStoreConnectionMap.remove(connection.getDstorePort());
-        this.fileIndex.removeDstore(connection.getDstorePort());
+    /**
+     * Method which gets all files currently stored on the system
+     * Only includes files which are fully stored (not in the process of being stored)
+     * @return
+     */
+    public String getFilesForList() {
+        StringBuilder s = new StringBuilder();
+        for (String file : this.fileIndex.getStoredFilenames()) {
+            s.append(" ").append(file);
+        }
+        return s.toString();
+    }
+
+    public void store(String fileToStore, int filesize, ControllerClientConnection clientConnection) {
+        //If we receive a store request from client, we try to add the file to the index. If it already
+        //exists, we return an ERROR_FILE_ALREADY_EXISTS
+        if (!this.fileIndex.startStoring(fileToStore, filesize)) {
+            clientConnection.sendToClient(new FileAlreadyExistsToken(null), Protocol.ERROR_FILE_ALREADY_EXISTS_TOKEN);
+            return;
+        }
+
+        //If file does not already exist, we continue and try to get a String of all ports to store
+        //the file to. Then we send these ports to the client
+        String message = this.getPortsForStore(fileToStore);
+        clientConnection.sendToClient(new StoreToken(null,null,0), message);
+
+        //Here we extract the port numbers from the string (req) as integers we are storing in and bundle it in
+        //an ArrayList called intPorts
+        String removedExtraSpace = message.substring(1);
+        String[] ports = (removedExtraSpace.split(" "));
+        ArrayList<Integer> intPorts = new ArrayList<>();
+        for (String port : ports) {
+            //Should maybe heave try/catch block here but there is no user input so I don't think it is needed
+            intPorts.add(Integer.parseInt(port));
+        }
+
+        //Tells controller the what ports we expect a STORE_ACK from
+        this.fileIndex.addStoreAcksForFile(fileToStore, intPorts);
+        //Tells controller to start listening for the STORE_ACKs, returns true if all the acks are received within
+        //the controller's timeout period
+        boolean ifAcksReceived = this.ifAllStoreAcksReceived(fileToStore, intPorts);
+        if (ifAcksReceived) {
+            //If all the store acks are received, we send a STORE_COMPLETE to client
+            clientConnection.sendToClient(new StoreCompleteToken(null), Protocol.STORE_COMPLETE_TOKEN);
+        }
+    }
+
+
+    /**
+     * Method which oversees removing a file from the Dstores and index (basically carries out the remove operation)
+     * @param filename
+     * @param req
+     * @param clientConnection
+     */
+    public void remove(String filename, Token req, ControllerClientConnection clientConnection) {
+        //Tries to start removing process in index manager. If it fails, the file does not exist, so send error to client
+        if (!this.fileIndex.startRemoving(filename)) {
+            clientConnection.sendToClient(new FileNotExistToken(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            return;
+        }
+        ArrayList<Integer> ports = this.fileIndex.getDstoresStoringFile(filename);
+        //Sends the Dstore the remove instruction
+        //Done in a new thread so that we are listening for remove acknowledgements immediately
+        //Otherwise, could miss an ack because we are still telling other Dstores to remove the file
+        //Could potentially cause issues with timeouts if there are large number of Dstores
+        for (Integer port : ports) {
+            new Thread(() -> {
+                String msg = Protocol.REMOVE_TOKEN + " " + filename;
+                this.dStoreConnectionMap.get(port).sendMessageToDstore(msg);
+            }).start();
+        }
+        //Add expected acks to index manager (what ports to expect REMOVE_ACKs back from)
+        this.fileIndex.addRemoveAcksForFile(filename, ports);
+        //If we receive all remove acks
+        if (this.fileIndex.listenForRemoveAcks(filename, this.timeout, ports)) {
+            clientConnection.sendToClient(new RemoveCompleteToken(null), Protocol.REMOVE_COMPLETE_TOKEN);
+        }
+    }
+
+
+    /**
+     * Method to handle the LOAD operation
+     * @param filename
+     * @param clientConnection
+     * @return
+     */
+    public ArrayList<Integer> load(String filename, ControllerClientConnection clientConnection) {
+        //If our list of files does not contain requested file, return FILE_DOES_NOT_EXIST error to client
+        if (!this.fileIndex.getStoredFilenames().contains(filename)) {
+            clientConnection.sendToClient(new FileNotExistToken(null), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+        }
+        //Make a copy of list of Dstores all storing certain file
+        //Need a copy because we want to alter the list, but do not want to alter the original
+        //Basically, circumventing call-by-reference
+        ArrayList<Integer> allDstoresStoringFile = new ArrayList<>(this.fileIndex.getDstoresStoringFile(filename));
+        if (allDstoresStoringFile.size() != 0) {
+            //Gets first port storing file and sends it to client. Then removes it from list of Dstores
+            //so in case of a reload, we do not send the same port again
+            Integer portToLoadFrom = allDstoresStoringFile.get(0);
+            allDstoresStoringFile.remove(portToLoadFrom);
+            //Gets filesize to send top client
+            int filesize = this.fileIndex.getFile(filename).getFilesize();
+            //Creates and sends message to client
+            LoadFromToken tokenToSend = new LoadFromToken(Protocol.LOAD_FROM_TOKEN + " " + portToLoadFrom
+                                                               + " " + filesize, portToLoadFrom, filesize);
+            clientConnection.sendToClient(tokenToSend, tokenToSend.req);
+            //Returns list of ports that have not been checked if they store the file (in case of reload)
+            return allDstoresStoringFile;
+        } else {
+            clientConnection.sendToClient(new ErrorLoadToken(null), Protocol.ERROR_LOAD_TOKEN);
+            return null;
+        }
     }
 
     /**
@@ -119,39 +257,16 @@ public class Controller {
         }
     }
 
-    public boolean updateIndex(String filename, File.State s) {
-        if (s == File.State.STORE_IN_PROGRESS) {
-            return this.fileIndex.startStoring(filename);
-        } else if (s == File.State.REMOVE_IN_PROGRESS) {
-            return this.fileIndex.startRemoving(filename);
-        }
-        return false;
+    public int getFilesize(String filename) {
+        return this.fileIndex.getFile(filename).getFilesize();
     }
 
-    /**
-     * Method to add the ports we expect acknowledgements back from to the index manager
-     * We specify which acks we are waiting for based on the token passed in (req)
-     * @param ports: ports we expect acks from
-     * @param filename: name of file to expect acks for
-     * @param req: token for what operation we are doing (store or remove)
-     * @return true if acks are added successfully, false if not
-     */
-    public boolean addExpectedAcks(ArrayList<Integer> ports, String filename, Token req) {
-        try {
-            if (req instanceof StoreToken) {
-                this.fileIndex.addStoreAcksForFile(filename, ports);
-                return true;
-            } else if (req instanceof RemoveToken) {
-                this.fileIndex.addRemoveAcksForFile(filename, ports);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (NumberFormatException e) {
-            System.out.println("### ERROR ###   Cannot parse ports as integers : " + ports.toString());
-            return false;
-        }
+    public synchronized void removeDstore(ControllerToDStoreConnection connection) {
+        this.dStores.remove(connection);
+        this.dStoreConnectionMap.remove(connection.getDstorePort());
+        this.fileIndex.removeDstore(connection.getDstorePort());
     }
+
 
     /**
      * Method which checks if all store acks are received by calling method in index manager
@@ -187,32 +302,8 @@ public class Controller {
         }
     }
 
-    /**
-     * Method which oversees removing a file from the Dstores and index (basically carries out the remove operation)
-     * @param filename
-     * @param req
-     * @param connection
-     */
-    public void removeFile(String filename, Token req, ControllerClientConnection connection) {
-        ArrayList<Integer> ports = this.fileIndex.getDstoresStoringFile(filename);
-
-        //Sends the Dstore the remove instruction
-        //Done in a new thread so that we are listening for remove acknowledgements immediately
-        //Otherwise, could miss an ack because we are still telling other Dstores to remove the file
-        //Could potentially cause issues with timeouts if there are large number of Dstores
-
-        for (Integer port : ports) {
-            new Thread(() -> this.dStoreConnectionMap.get(port).removeFile(filename)).start();
-        }
-
-
-        //If added acks successfully
-        if (this.addExpectedAcks(ports, filename, req)) {
-            //If we receive all remove acks
-            if (this.fileIndex.listenForRemoveAcks(filename, this.timeout, ports)) {
-                connection.sendToClient(new RemoveCompleteToken(null), Protocol.REMOVE_COMPLETE_TOKEN);
-            }
-        }
+    public void listReceived(FileListToken t, Integer port) {
+        this.rebalancer.listReceived(t.fileList, port);
     }
 
     /** Args layout:

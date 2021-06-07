@@ -10,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Dstore {
 
@@ -61,12 +63,12 @@ public class Dstore {
     }
 
     public boolean removeFile(String filename) {
-        File f = new File(fileFolder + "\\" + filename);
+        File f = new File(this.fileFolder.getPath() + "/" + filename);
         try {
             Files.delete(Paths.get(f.getAbsolutePath()));
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("### ERROR ###   File " + filename + "does not exist on Dstore (port : " + this.port + ")");
             return false;
         }
     }
@@ -75,7 +77,29 @@ public class Dstore {
         this.controllerConnection.sendMessageToController(ack);
     }
 
+    public byte[] loadDataFromFile(String filename) {
+        String path = this.fileFolder.getPath() + "/" + filename;
+        File f = new File(path);
+        try {
+            FileInputStream r = new FileInputStream(f);
+            byte[] data = new byte[(int) f.length()];
+            r.read(data);
+            r.close();
+            return data;
+        } catch (IOException e) {
+            return null;
+        }
+    }
 
+    public ArrayList<String> getListOfFiles() {
+        String[] files = this.fileFolder.list();
+        if (files != null) {
+            return new ArrayList<>(Arrays.asList(files));
+        } else {
+            return new ArrayList<>();
+        }
+
+    }
 
     /** Args layout:
      *  args[0] = port            -> port for DStore to listen on

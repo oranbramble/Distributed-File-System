@@ -5,13 +5,9 @@ import Loggers.DstoreLogger;
 import Loggers.Protocol;
 import Tokenizer.*;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
 
 public class DstoreClientConnection extends ConnectionParent {
 
@@ -34,8 +30,8 @@ public class DstoreClientConnection extends ConnectionParent {
                 DstoreLogger.getInstance().messageReceived(this.socket, req);
                 Token reqToken = Tokenizer.getToken(req);
                 if (reqToken != null) {
-                    this.handleRequest(reqToken);
-
+                    boolean ifBreak = this.handleRequest(reqToken);
+                    if (ifBreak) {break;}
                 } else {
                     System.out.println("### ERROR ###   Malformed input received on port " + this.socket.getLocalPort() +
                             " from port " + this.socket.getPort());
@@ -43,10 +39,15 @@ public class DstoreClientConnection extends ConnectionParent {
             }
         } catch (IOException e) {
         }
+        try {
+            this.socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
-    public void handleRequest(Token reqToken) {
+    public boolean handleRequest(Token reqToken) throws IOException {
         if (reqToken instanceof StoreToken) {
             //Sends acknowledgement to client
             this.sendToClient(Protocol.ACK_TOKEN, reqToken);
@@ -59,7 +60,19 @@ public class DstoreClientConnection extends ConnectionParent {
                 this.dStore.sendAckToController(Protocol.STORE_ACK_TOKEN + " " + ((StoreToken)reqToken).filename);
             }
 
+        } else if (reqToken instanceof LoadDataToken) {
+            //Gets data from file on Dstore and if the data retrieved successfully, data sent to client
+            //If not retrieved succesfully, returns true which closes the socket with client
+            String filename = ((LoadDataToken)reqToken).filename;
+            byte[] fileData = this.dStore.loadDataFromFile(filename);
+            if (fileData == null) {
+                return true;
+            } else {
+                this.outData.write(fileData);
+                this.outData.flush();
+            }
         }
+        return false;
     }
 
     private void sendToClient(String message, Token reqReceivedToken) {

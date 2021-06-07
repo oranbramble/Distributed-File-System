@@ -1,39 +1,53 @@
 package IndexManager;
 
+import DStore.Dstore;
 import Tokenizer.RemoveAckToken;
 import Tokenizer.StoreAckToken;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 public class IndexManager {
 
     private volatile ConcurrentHashMap<String, ArrayList<Integer>> expectedStoreAcksMap;
     private volatile ConcurrentHashMap<String, ArrayList<Integer>> expectedRemoveAcksMap;
-    private volatile ConcurrentHashMap<String, File.State> fileStates;
-    private volatile ConcurrentHashMap<String, ArrayList<Integer>> fileToDstoreMap;
+    private volatile ConcurrentHashMap<String, DstoreFile> files;
+  //  private volatile ConcurrentHashMap<String, ArrayList<Integer>> fileToDstoreMap;
 
 
     public IndexManager() {
-        this.fileStates = new ConcurrentHashMap<>();
+        this.files = new ConcurrentHashMap<>();
         this.expectedStoreAcksMap = new ConcurrentHashMap<>();
         this.expectedRemoveAcksMap = new ConcurrentHashMap<>();
-        this.fileToDstoreMap = new ConcurrentHashMap<>();
     }
 
-    public File.State getFileState(String filename) {
-        return this.fileStates.get(filename);
+    public DstoreFile getFile(String filename) {
+        return this.files.get(filename);
+    }
+
+    public ArrayList<DstoreFile> getFileObjects() {
+        return new ArrayList<>(this.files.values());
+    }
+
+    public boolean checkIfAllAvailable() {
+        boolean ifAllAvailable = true;
+        for (DstoreFile file : this.files.values()) {
+            if (file.getState() != DstoreFile.State.AVAILABLE) {
+                ifAllAvailable = false;
+                break;
+            }
+        }
+        return ifAllAvailable;
     }
 
     /**
      * Method which gets all files that are fully stored on the system
-     * They can be in the process of being removed or loaded, but cannot be in the process of being stored
+     * They can be in the process of being loaded, but cannot be in the process of being stored or removed
      * @return List of files that are fully stored on system
      */
-    public ArrayList<String> getStoredFiles() {
+    public ArrayList<String> getStoredFilenames() {
         ArrayList<String> storedFiles = new ArrayList<>();
-        for (String file : this.fileStates.keySet()) {
-            if (this.fileStates.get(file) != File.State.STORE_IN_PROGRESS) {
+        for (String file : this.files.keySet()) {
+            if (this.files.get(file).getState() == DstoreFile.State.AVAILABLE) {
                 storedFiles.add(file);
             }
         }
@@ -46,18 +60,25 @@ public class IndexManager {
      * @return List of all Dstore ports
      */
     public ArrayList<Integer> getDstoresStoringFile(String filename) {
-        return this.fileToDstoreMap.get(filename);
+        try {
+            return this.files.get(filename).getDstoresStoredOn();
+        } catch (NullPointerException e) {
+            return new ArrayList<>();
+        }
     }
 
-    public synchronized void changeState(String filename, File.State s) {
-        this.fileStates.put(filename, s);
-
+    public synchronized void changeState(String filename, DstoreFile.State s) {
+        try {
+            this.files.get(filename).setState(s);
+        } catch (NullPointerException ignored) {
+            System.out.println("### ERROR ###   Could not change state of file :" + filename);
+        }
     }
 
     public synchronized boolean startRemoving(String filename) {
-        if (this.fileStates.containsKey(filename)) {
-            if (this.fileStates.get(filename) == File.State.AVAILABLE) {
-                this.fileStates.put(filename, File.State.REMOVE_IN_PROGRESS);
+        if (this.files.containsKey(filename)) {
+            if (this.files.get(filename).getState() == DstoreFile.State.AVAILABLE) {
+                this.files.get(filename).setState(DstoreFile.State.REMOVE_IN_PROGRESS);
                 return true;
             }
         }
@@ -69,11 +90,11 @@ public class IndexManager {
      * @param filename: Name of file we want to store
      * @return true if file does not already exist, false if it does
      */
-    public synchronized boolean startStoring(String filename) {
-        if (this.fileStates.containsKey(filename)) {
+    public synchronized boolean startStoring(String filename, int filesize) {
+        if (this.files.containsKey(filename)) {
            return false;
         } else {
-            this.fileStates.put(filename, File.State.STORE_IN_PROGRESS);
+            this.files.put(filename, new DstoreFile(filename, filesize, DstoreFile.State.STORE_IN_PROGRESS));
             return true;
         }
     }
@@ -83,8 +104,8 @@ public class IndexManager {
      * @param filename: Filename to remove from the index
      */
     public synchronized void removeFileFromIndex(String filename) {
-        if (this.fileStates.containsKey(filename)) {
-            this.fileStates.remove(filename);
+        if (this.files.containsKey(filename)) {
+            this.files.remove(filename);
         }
     }
 
@@ -93,8 +114,8 @@ public class IndexManager {
      * @param port
      */
     public void removeDstore(Integer port) {
-        for (ArrayList<Integer> ports : this.fileToDstoreMap.values()) {
-            ports.remove(port);
+        for (DstoreFile file : this.files.values()) {
+            file.getDstoresStoredOn().remove(port);
         }
     }
 
@@ -121,14 +142,16 @@ public class IndexManager {
         double timeoutStamp = System.currentTimeMillis() + timeout;
         while (this.expectedStoreAcksMap.get(filename).size() != 0) {
             if (System.currentTimeMillis() >= timeoutStamp) {
+                System.out.println("--- TIMEOUT ---   Controller timed out waiting for STORE_ACKs");
                 this.expectedStoreAcksMap.remove(filename);
+                this.files.remove(filename);
                 return false;
             }
         }
         this.expectedStoreAcksMap.remove(filename);
-        this.changeState(filename, File.State.AVAILABLE);
+        this.changeState(filename, DstoreFile.State.AVAILABLE);
         //We add to a different map here, which maps a filename to the ports/dstores it is stored on
-        this.fileToDstoreMap.put(filename, ports);
+        this.files.get(filename).setDstoresStoredOn(ports);
         return true;
     }
 
@@ -143,15 +166,12 @@ public class IndexManager {
         double timeoutStamp = System.currentTimeMillis() + timeout;
         while (this.expectedRemoveAcksMap.get(filename).size() != 0) {
             if (System.currentTimeMillis() >= timeoutStamp) {
-                this.expectedRemoveAcksMap.remove(filename);
-                return false;
+                System.out.println("--- TIMEOUT ---   Controller timed out waiting for REMOVE_ACKs");
+                break;
             }
         }
         this.expectedRemoveAcksMap.remove(filename);
-        this.fileStates.remove(filename);
-        this.fileToDstoreMap.remove(filename);
-        //We add to a different map here, which maps a filename to the ports/dstores it is stored on
-        this.fileToDstoreMap.put(filename, ports);
+        this.files.remove(filename);
         return true;
     }
 

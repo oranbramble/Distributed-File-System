@@ -2,6 +2,8 @@ package DStore;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+
 import ConnectionParent.*;
 import Loggers.DstoreLogger;
 import Loggers.Protocol;
@@ -43,7 +45,6 @@ public class DstoreToControllerConnection extends ConnectionParent{
                         new Thread (() -> {
                             this.handleRequest(reqToken);
                         }).start();
-
                     } else {
                         System.out.println("### ERROR ###   Malformed input received on port " + this.socket.getLocalPort() +
                                 " from port " + this.socket.getPort());
@@ -64,6 +65,13 @@ public class DstoreToControllerConnection extends ConnectionParent{
             } else {
                 this.sendMessageToController(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN + " " + filename);
             }
+        } else if (reqToken instanceof ListToken) {
+            ArrayList<String> files = this.dstore.getListOfFiles();
+            StringBuilder message = new StringBuilder(Protocol.LIST_TOKEN);
+            for (String f : files) {
+                message.append(" ").append(f);
+            }
+            this.sendMessageToController(message.toString());
         }
     }
 

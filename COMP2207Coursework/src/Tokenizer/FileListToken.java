@@ -7,7 +7,7 @@ import java.util.StringTokenizer;
  * Token representing command LIST file_list
  */
 public class FileListToken extends Token{
-    ArrayList<String> fileList;
+    public ArrayList<String> fileList;
 
     public FileListToken(String req, StringTokenizer stringTokenizer) {
         this.req = req;

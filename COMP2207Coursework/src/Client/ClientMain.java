@@ -1,12 +1,12 @@
 package Client;
 
 import java.io.IOException;
+import java.util.Scanner;
 
 public class ClientMain {
 
     public static void main(String[] args) throws InterruptedException, IOException {
-        new Client().run("STORE test1.txt 28", args[0]);
-        String[] commands = {"REMOVE test1.txt", "REMOVE test1.txt", "REMOVE test1.txt"};
+        String[] commands = {"STORE test1.txt 28", "STORE test2.txt 41", "LOAD test1.txt"};
         for (String command : commands) {
             new Thread(() -> {
                 try {
@@ -19,11 +19,25 @@ public class ClientMain {
         }
         Thread.sleep(3000);
         new Client().run("LIST", args[0]);
-        /*
+
         Thread.sleep(3000);
-        new Client().run("REMOVE test1.txt", args[0]);
-        Thread.sleep(3000);
-        new Client().run("LIST", args[0]);
-         */
+        Scanner s = new Scanner(System.in);
+        String[] commands2 = {"REMOVE test1.txt", "LOAD test1.txt"};
+        for (String command : commands2) {
+            new Thread(() -> {
+                try {
+                    new Client().run(command, args[0]);
+                } catch (IOException e) {
+                    System.out.println("ERROR");
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+        while (true) {
+            new Client().run(s.nextLine(), args[0]);
+        }
+
+
+
     }
 }

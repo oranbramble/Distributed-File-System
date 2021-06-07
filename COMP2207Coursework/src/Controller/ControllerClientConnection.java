@@ -1,6 +1,6 @@
 package Controller;
 
-import IndexManager.File;
+import IndexManager.*;
 import ConnectionParent.ConnectionParent;
 import Loggers.ControllerLogger;
 import Loggers.Protocol;
@@ -13,11 +13,14 @@ public class ControllerClientConnection extends ConnectionParent {
 
     private Token firstRequest;
     private Controller controller;
+    private ArrayList<Integer> reloadDstoresToTry;
+    private ArrayList<String> queuedRequests;
 
     public ControllerClientConnection(Socket s, Token t, Controller controller) throws IOException {
         super(s);
         this.firstRequest = t;
         this.controller = controller;
+        this.reloadDstoresToTry = new ArrayList<>();
     }
 
     @Override
@@ -26,14 +29,25 @@ public class ControllerClientConnection extends ConnectionParent {
         try {
             while (true) {
                 String req = this.inText.readLine();
+                ControllerLogger.getInstance().messageReceived(this.socket, req);
                 //If request is null, client has disconnected so loop will break and this thread will end
                 if (req != null) {
-                    ControllerLogger.getInstance().messageReceived(this.socket, req);
-                    Token reqToken = Tokenizer.getToken(req);
-                    this.handleRequest(reqToken);
+                    //If we are rebalancing, then que requests
+                    if (this.controller.getIfRebalancing()) {
+                        this.queuedRequests.add(req);
+                    } else {
+                        //Deals with queued requests first, then does request just received
+                        for (String queuedReq : this.queuedRequests) {
+                            Token reqToken = Tokenizer.getToken(queuedReq);
+                            this.handleRequest(reqToken);
+                        }
+                        Token reqToken = Tokenizer.getToken(req);
+                        this.handleRequest(reqToken);
+                    }
                 } else {
                     break;
                 }
+
             }
         //When client disconnects, we ignore it as this thread will now end
         } catch (IOException e) {}
@@ -49,19 +63,22 @@ public class ControllerClientConnection extends ConnectionParent {
 
         //If request is a list, get list of files from controller and send them to client
         if (reqToken instanceof ListToken) {
-            String message = this.controller.getFileList();
+            String message = this.controller.getFilesForList();
             this.sendToClient(reqToken, message);
         //If request is a store, call handleStore method to handle request
         } else if (reqToken instanceof StoreToken) {
             this.handleStore(reqToken);
-
         } else if (reqToken instanceof RemoveToken) {
             this.handleRemove(reqToken);
         } else if (reqToken instanceof LoadToken) {
-
-        } else {
+            this.handleLoad(reqToken);
+        } else if (reqToken == null){
             System.out.println("### ERROR ###   Error parsing request from client\n" +
                                "                Request: " + reqToken.req);
+        }
+
+        if (reqToken instanceof ReloadToken) {
+            this.handleReload(reqToken);
         }
     }
 
@@ -98,43 +115,9 @@ public class ControllerClientConnection extends ConnectionParent {
      * @param req: The tokenized version of the STORE request sent by the client
      */
     private void handleStore(Token req) {
-        //If we receive a store request from client, we try to add the file to the index. If it already
-        //exists, we return an ERROR_FILE_ALREADY_EXISTS
-        String fileToStore = ((StoreToken)req).filename;
-        boolean ifIndexUpdated = this.controller.updateIndex(fileToStore, File.State.STORE_IN_PROGRESS);
-        if (!ifIndexUpdated) {
-            this.sendToClient(new FileAlreadyExistsToken(null), Protocol.ERROR_FILE_ALREADY_EXISTS_TOKEN);
-            return;
-        }
-
-        //If file does not already exist, we continue and try to get a String of all ports to store
-        //the file to. Then we send these ports to the client
-        String message = this.controller.getPortsForStore(fileToStore);
-        this.sendToClient(req, message);
-
-        //Here we extract the port numbers from the string (req) as integers we are storing in and bundle it in
-        //an ArrayList called intPorts
-        String removedExtraSpace = message.substring(1);
-        String[] ports = (removedExtraSpace.split(" "));
-        ArrayList<Integer> intPorts = new ArrayList<>();
-        for (String port : ports) {
-            //Should maybe heave try/catch block here but there is no user input so I don't think it is needed
-            intPorts.add(Integer.parseInt(port));
-        }
-
-        //Tells controller the what ports we expect a STORE_ACK from
-        //Gets a boolean return, so true if we succeeded in telling the controller
-        //Would fail if the port numbers were invalid
-        boolean acksAdded = this.controller.addExpectedAcks(intPorts, fileToStore, req);
-        if (acksAdded) {
-            //Tells controller to start listening for the STORE_ACKs, returns true if all the acks are received within
-            //the controller's timeout period
-            boolean ifAcksReceived = this.controller.ifAllStoreAcksReceived(fileToStore, intPorts);
-            if (ifAcksReceived) {
-                //If all th
-                this.sendToClient(new StoreCompleteToken(null), Protocol.STORE_COMPLETE_TOKEN);
-            }
-        }
+        String filename = ((StoreToken)req).filename;
+        int filesize = ((StoreToken)req).filesize;
+        this.controller.store(filename, filesize, this);
     }
 
     /**
@@ -144,11 +127,28 @@ public class ControllerClientConnection extends ConnectionParent {
     private void handleRemove(Token req) {
         //Tries to update index to set file to REMOVE_IN_PROGRESS, if that fails then we send error to client
         String fileToRemove = ((RemoveToken)req).filename;
-        boolean ifIndexUpdated = this.controller.updateIndex(fileToRemove, File.State.REMOVE_IN_PROGRESS);
-        if (!ifIndexUpdated) {
-            this.sendToClient(new FileNotExistToken(null), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
-            return;
+        this.controller.remove(fileToRemove, req, this);
+    }
+
+    private void handleLoad(Token req) {
+        String filename = ((LoadToken)req).filename;
+        this.reloadDstoresToTry = this.controller.load(filename, this);
+    }
+
+    private void handleReload(Token req) {
+        String filename = ((ReloadToken)req).filename;
+        if (this.reloadDstoresToTry != null) {
+            if (this.reloadDstoresToTry.size() != 0) {
+                int portToTry = this.reloadDstoresToTry.get(0);
+                this.reloadDstoresToTry.remove(Integer.valueOf(portToTry));
+                int filesize = this.controller.getFilesize(filename);
+                LoadFromToken tokenToSend = new LoadFromToken(Protocol.LOAD_FROM_TOKEN + " " + portToTry + " " + filesize, portToTry, filesize);
+                this.sendToClient(tokenToSend, tokenToSend.req);
+            } else {
+                this.sendToClient(new ErrorLoadToken(null), Protocol.ERROR_LOAD_TOKEN);
+            }
+        } else {
+            this.sendToClient(new ErrorLoadToken(null), Protocol.ERROR_LOAD_TOKEN);
         }
-        this.controller.removeFile(fileToRemove, req, this);
     }
 }
