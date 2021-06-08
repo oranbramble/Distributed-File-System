@@ -37,6 +37,14 @@ public class ControllerToDStoreConnection extends ConnectionParent{
         new Thread (() -> {
             try {
                 while (true) {
+                    //Handles queued requests if we are not rebalancing
+                    while (this.queuedRequests.size() != 0) {
+                        if (!this.controller.getIfRebalancing()) {
+                            Token queuedReq = this.queuedRequests.get(0);
+                            this.handleRequest(queuedReq);
+                            this.queuedRequests.remove(0);
+                        }
+                    }
                     String msg = this.inText.readLine();
                     ControllerLogger.getInstance().messageReceived(this.socket, msg);
                     Token msgToken = Tokenizer.getToken(msg);
@@ -47,7 +55,6 @@ public class ControllerToDStoreConnection extends ConnectionParent{
                         } else if (msgToken instanceof ListToken) {
                             FileListToken token = new FileListToken(Protocol.LIST_TOKEN, new StringTokenizer(""));
                             this.controller.listReceived(token, this.dStorePort);
-
                         } else if (this.controller.getIfRebalancing()) {
                             this.queuedRequests.add(msgToken);
                         } else {

@@ -28,8 +28,6 @@ public class Controller {
     private int timeout;
     private int rebalancePeriod;
     private volatile boolean ifRebalancing;
-    private ArrayList<Token> queuedRequests;
-
     private Rebalancer rebalancer;
     private IndexManager fileIndex;
     private Map<Integer, ControllerToDStoreConnection> dStoreConnectionMap;
@@ -43,7 +41,6 @@ public class Controller {
         this.dStoreConnectionMap = Collections.synchronizedMap(new HashMap<>());
         this.fileIndex = new IndexManager();
         this.dStores = new ArrayList<>();
-        this.queuedRequests = new ArrayList<>();
 
         ControllerLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY);
     }
@@ -74,16 +71,15 @@ public class Controller {
         String line = in.readLine();
         ControllerLogger.getInstance().messageReceived(s, line);
         Token token = Tokenizer.getToken(line);
+        this.handleFirstRequest(token, s);
 
-        if (this.ifRebalancing) {
-            this.queuedRequests.add(token);
-        } else {
-            for (Token req : this.queuedRequests) {
-                this.handleFirstRequest(req, s);
-            }
-            this.handleFirstRequest(token, s);
-        }
     }
+
+    /******
+     * MAY NEED TO HANDLE JOIN QUEUING
+     */
+
+
 
     private void handleFirstRequest(Token token, Socket s) throws IOException {
         //We tokenize the first command received. Then run checks on it to see what type of request it is.
@@ -108,9 +104,14 @@ public class Controller {
         if (!this.ifRebalancing) {
             //Waits for all files to be available before starting the rebalance operation
             while (!this.fileIndex.checkIfAllAvailable()) {}
+            System.out.println();
+            System.out.println("REBALANCE START AT : " + System.currentTimeMillis());
             this.ifRebalancing = true;
             this.rebalancer = new Rebalancer(this.timeout);
-            this.rebalancer.rebalance(this.fileIndex.getFileObjects(),this.dStoreConnectionMap);
+            this.rebalancer.rebalance(this.fileIndex.getFileObjects(),this.dStoreConnectionMap, this.R);
+            System.out.println();
+            System.out.println("FINISHED REBALANCE AT : " + System.currentTimeMillis());
+            System.out.println();
             this.ifRebalancing = false;
         }
     }
@@ -210,9 +211,11 @@ public class Controller {
      * @return
      */
     public ArrayList<Integer> load(String filename, ControllerClientConnection clientConnection) {
-        //If our list of files does not contain requested file, return FILE_DOES_NOT_EXIST error to client
+        //If our list of files does not contain requested file, return FILE_DOES_NOT_EXIST error to client and end
+        //execution of load instruction
         if (!this.fileIndex.getStoredFilenames().contains(filename)) {
             clientConnection.sendToClient(new FileNotExistToken(null), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            return null;
         }
         //Make a copy of list of Dstores all storing certain file
         //Need a copy because we want to alter the list, but do not want to alter the original
@@ -225,12 +228,18 @@ public class Controller {
             allDstoresStoringFile.remove(portToLoadFrom);
             //Gets filesize to send top client
             int filesize = this.fileIndex.getFile(filename).getFilesize();
-            //Creates and sends message to client
-            LoadFromToken tokenToSend = new LoadFromToken(Protocol.LOAD_FROM_TOKEN + " " + portToLoadFrom
-                                                               + " " + filesize, portToLoadFrom, filesize);
-            clientConnection.sendToClient(tokenToSend, tokenToSend.req);
-            //Returns list of ports that have not been checked if they store the file (in case of reload)
-            return allDstoresStoringFile;
+            //If returned size is -1, there file does not exist at this point (remove concurrency error)
+            if (filesize != -1) {
+                //Creates and sends message to client
+                LoadFromToken tokenToSend = new LoadFromToken(Protocol.LOAD_FROM_TOKEN + " " + portToLoadFrom
+                        + " " + filesize, portToLoadFrom, filesize);
+                clientConnection.sendToClient(tokenToSend, tokenToSend.req);
+                //Returns list of ports that have not been checked if they store the file (in case of reload)
+                return allDstoresStoringFile;
+            } else {
+                clientConnection.sendToClient(new FileNotExistToken(null), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+                return null;
+            }
         } else {
             clientConnection.sendToClient(new ErrorLoadToken(null), Protocol.ERROR_LOAD_TOKEN);
             return null;
@@ -258,7 +267,12 @@ public class Controller {
     }
 
     public int getFilesize(String filename) {
-        return this.fileIndex.getFile(filename).getFilesize();
+        DstoreFile file = this.fileIndex.getFile(filename);
+        if (file != null) {
+            return file.getFilesize();
+        } else {
+            return -1;
+        }
     }
 
     public synchronized void removeDstore(ControllerToDStoreConnection connection) {

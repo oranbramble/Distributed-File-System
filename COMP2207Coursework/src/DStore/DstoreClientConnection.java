@@ -52,7 +52,7 @@ public class DstoreClientConnection extends ConnectionParent {
             //Sends acknowledgement to client
             this.sendToClient(Protocol.ACK_TOKEN, reqToken);
             //Gets file content from client
-            String fileContent = getFileContentFromSocket(((StoreToken)reqToken).filesize);
+            byte[] fileContent = getFileContentFromSocket(((StoreToken)reqToken).filesize);
             //Writes data to file
             if (fileContent != null) {
                 this.dStore.storeToFile(((StoreToken)reqToken).filename, fileContent);
@@ -84,14 +84,14 @@ public class DstoreClientConnection extends ConnectionParent {
     }
 
 
-    private String getFileContentFromSocket(int filesize) {
+    private byte[] getFileContentFromSocket(int filesize) {
         try {
             //We set a timeout for just this reading in, so that if client does not send data then we can still
             //continue
             this.socket.setSoTimeout(this.timeout);
             byte[] bytes = this.inData.readNBytes(filesize);
             this.socket.setSoTimeout(0);
-            return new String(bytes);
+            return bytes;
         } catch (SocketException e) {
             System.out.println("--- TIMEOUT ---   Dstore (port:" + this.socket.getLocalPort() + ") timed out waiting" +
                                " for file data from client (port:" + this.socket.getPort());

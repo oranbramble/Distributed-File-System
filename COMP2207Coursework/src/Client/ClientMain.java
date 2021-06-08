@@ -17,10 +17,9 @@ public class ClientMain {
                 }
             }).start();
         }
-        Thread.sleep(3000);
+        Thread.sleep(2000);
         new Client().run("LIST", args[0]);
 
-        Thread.sleep(3000);
         Scanner s = new Scanner(System.in);
         String[] commands2 = {"REMOVE test1.txt", "LOAD test1.txt"};
         for (String command : commands2) {

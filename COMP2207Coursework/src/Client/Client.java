@@ -40,6 +40,8 @@ public class Client {
             this.remove(in);
         } else if (t instanceof LoadToken) {
             this.load(t,in,out);
+        } else {
+            System.out.println("MALFORMED COMMAND");
         }
 
         out.close();
@@ -138,7 +140,6 @@ public class Client {
                     byte[] fileContent = reader.readNBytes(sentToken.filesize);
 
                     System.out.println("SENT FILE : " + fileContent + ", LENGTH : " + fileContent.length);
-                    //   System.out.println("CONNECTION FROM " + socket.getLocalPort() + " TO " + socket.getPort());
                     outData.write(fileContent);
                     outData.flush();
                     reader.close();

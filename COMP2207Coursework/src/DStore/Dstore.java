@@ -50,10 +50,10 @@ public class Dstore {
         }
     }
 
-    public void storeToFile(String filename, String data)  {
+    public void storeToFile(String filename, byte[] data)  {
         try {
-            File f = new File(this.fileFolder.getPath() + "/" +filename);
-            FileWriter writer = new FileWriter(f);
+            File f = new File(this.fileFolder.getPath() + "/" + filename);
+            FileOutputStream writer = new FileOutputStream(f);
             writer.write(data);
             writer.flush();
             writer.close();
