@@ -24,7 +24,9 @@ To start a Controller, the following command line parameters are used:
 ```
 java Controller cport R timeout rebalance_period
 ```
-
+> Controller is given a port to listen on (cport), a replication factor (R), a
+timeout in milliseconds (timeout) and how long to wait (in milliseconds) to start the next
+rebalance operation (rebalance_period)
 
 ### Client
 
