@@ -19,6 +19,12 @@ There is only one Controller which orchestrates client requests, and maintains a
 
 One key feature of the Controller, and the system as a whole, is the _**Rebalance operation**_. This is an alogorithm that ensures all files are evenly spread over the DStores whilst ensuring they are also stored `R` times each (`R` is an argument specified at the intialisation of the Controller object which specifies how many times we want to copy a file over the DStores). It is triggered either after a certain time interval has passed (`rebalance_period`) or when a new DStore joins the system. It is a complicated algorithm but it adds dynamic fault tolerance into the system, meaning the system will always remain fault tolerant, even after DStores fail. 
 
+To start a Controller, the following command line parameters are used:
+
+```
+java Controller cport R timeout rebalance_period
+```
+
 
 ### Client
 
@@ -29,3 +35,13 @@ are used withing the Client(s) to communicate with the Controller. These are:
 - `REMOVE`
 - `LOAD`
 - `LIST`
+
+To start a Client, the following command line parameters are used:
+
+```
+java Client cport timeout
+```
+
+### DStore
+
+These are the storage programs for storing files.
