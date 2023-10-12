@@ -13,7 +13,7 @@ However, the layout and communication concepts are the same for if it was spread
 
 ## Components
 
-### Controller
+### <br/>Controller
 
 There is only one Controller which orchestrates client requests, and maintains an index of files stored, on which DStores the files are stored, and the size of each file. The Controller never handles the files themselves however. For this, the Clients and DStores communicate directly, the Controller just informs each Client which DStore to communicate with, depending on the request. 
 
@@ -47,6 +47,6 @@ java Client cport timeout
 in milliseconds (timeout)
 
 
-### DStore
+### <br/>DStore
 
 These are the storage programs for storing files. They receive files to store directly from Clients when Clients send `STORE` command, and save them to the `file_folder` directory. They also send Clients file contents after receiving a `LOAD` operation from a Client, as well as removing a file when receiving a `REMOVE` command from the Controller. They also handle internal `REBALANCE` commands needed for the Rebalance operation.
