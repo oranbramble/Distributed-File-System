@@ -20,10 +20,10 @@ Components:
 - Files, with each file stored R times over the N DStores.
 
 Commands:
-```
-- STORE
-- REMOVE
-- LOAD
-- LIST
-```
+
+- `STORE`
+- `REMOVE`
+- `LOAD`
+- `LIST`
+
 
