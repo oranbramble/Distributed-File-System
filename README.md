@@ -13,12 +13,17 @@ However, the layout and communication concepts are the same for if it was spread
 
 ## Basic Information
 
-I have broken down core concepts of the program into a simple list below:
-
 Components:
 - One controller
 - N DStores
-- Multiple Clients
-- Mutliple Files, with each stored R times over the N DStores.
+- Clients
+- Files, with each file stored R times over the N DStores.
 
+Commands:
+```
+- STORE
+- REMOVE
+- LOAD
+- LIST
+```
 
