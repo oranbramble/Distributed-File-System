@@ -49,4 +49,4 @@ in milliseconds (timeout)
 
 ### DStore
 
-These are the storage programs for storing files.
+These are the storage programs for storing files. They receive files to store directly from Clients when Clients send `STORE` command, and save them to the `file_folder` directory. They also send Clients file contents after receiving a `LOAD` operation from a Client, as well as removing a file when receiving a `REMOVE` command from the Controller. They also handle internal `REBALANCE` commands needed for the Rebalance operation.
