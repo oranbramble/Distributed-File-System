@@ -17,4 +17,4 @@ However, the layout and communication concepts are the same for if it was spread
 
 There is only one Controller which orchestrates client requests, and maintains an index of files stored, on which DStores the files are stored, and the size of each file. The Controller never handles the files themselves however. For this, the Clients and DStores communicate directly, the Controller just informs each Client which DStore to communicate with, depending on the request. 
 
-One key feature of the Controller and the system as a whole is the _**Rebalance operation**_
+One key feature of the Controller and the system as a whole is the _**Rebalance operation**_. This is an alogorithm that ensures all files are evenly spread over the DStores whilst ensuring they are aslo stored `R` times each (`R` is an argument specified at the intialisation of the Controller object which specifies how many times we want to copy a file over the DStores).
