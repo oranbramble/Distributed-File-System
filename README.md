@@ -7,7 +7,7 @@ For simplicity and testability, this was deisgned to work on just one machine, w
 However, the layout and communication concepts are the same for if it was spread over multiple servers.
 
 <p align="center">
-![DFS image](https://github.com/oranbramble/Distributed-File-System/assets/56357864/18f6fba9-d74a-4164-8b69-6a81f6069f8d)
+<img src="https://github.com/oranbramble/Distributed-File-System/assets/56357864/18f6fba9-d74a-4164-8b69-6a81f6069f8d">
 </p>
 
 
