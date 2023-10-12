@@ -43,6 +43,9 @@ To start a Client, the following command line parameters are used:
 ```
 java Client cport timeout
 ```
+> client is started with the controller port to communicate with it (cport) and a timeout
+in milliseconds (timeout)
+
 
 ### DStore
 
