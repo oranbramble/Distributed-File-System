@@ -11,4 +11,14 @@ However, the layout and communication concepts are the same for if it was spread
 <img src="https://github.com/oranbramble/Distributed-File-System/assets/56357864/18f6fba9-d74a-4164-8b69-6a81f6069f8d">
 </p>
 
+## Basic Information
+
+I have broken down core concepts of the program into a simple list below:
+
+Components:
+- One controller
+- N DStores
+- Multiple Clients
+- Mutliple Files, with each stored R times over the N DStores.
+
 
