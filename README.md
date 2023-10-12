@@ -28,7 +28,7 @@ java Controller cport R timeout rebalance_period
 timeout in milliseconds (timeout) and how long to wait (in milliseconds) to start the next
 rebalance operation (rebalance_period)
 
-### Client
+### <br/>Client
 
 The Client(s) are the programs which commands are entered into in order to communicate with the storage system. As many clients can be run and send commands concurrently as needed. 4 different commands
 are used withing the Client(s) to communicate with the Controller. These are:
