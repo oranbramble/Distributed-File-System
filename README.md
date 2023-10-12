@@ -1,7 +1,7 @@
 # Distributed-File-System
 
 
-This project is a distributed storage system, which is used to **store files over multiple locations** for security and backup reasons. 
+<br/>This project is a distributed storage system, which is used to **store files over multiple locations** for security and backup reasons. 
 The concept is that _**Clients**_ communicate with a _**Controller**_ and the Data Stores (_**DStores**_) to either store a file, remove a file, load a file from storage or list all files.
 For simplicity and testability, this was deisgned to work on just one machine, with multiple CMD's running the separate elements representing different computers.
 However, the layout and communication concepts are the same for if it was spread over multiple servers.
