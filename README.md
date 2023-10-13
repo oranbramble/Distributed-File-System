@@ -9,15 +9,15 @@ However, the layout and communication concepts are the same for if it was spread
 <p align="center">
   <br/>
   <img src="https://github.com/oranbramble/Distributed-File-System/assets/56357864/18f6fba9-d74a-4164-8b69-6a81f6069f8d">
-  <br/>
+
 </p>
 
-## Networking
+## <br/>Networking
 
 <br/>The components communicate using TCP sockets. Each componnet is given the port to communicate to the Controller with (`cport`), and the Dstores are given a port number to listen on for incoming communication from the Controller. The Controller -> Dstore connections are persistant, and the Client -> Controller connections are not. <br/>
 
 
-## Components
+## <br/>Components
 
 ### <br/>Controller
 
