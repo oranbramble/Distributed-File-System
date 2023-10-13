@@ -5,7 +5,7 @@ import java.util.Scanner;
 
 public class ClientMain {
 
-    public static void main(String[] args) throws InterruptedException, IOException {
+    public static void main(String[] args) {
         System.out.println("Welcome to my Distributed File System");
         System.out.println("-------------------------------------");
         System.out.println("Commands List:");
