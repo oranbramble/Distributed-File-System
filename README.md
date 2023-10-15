@@ -113,3 +113,12 @@ LOAD filename
 LIST
 ```
 >This lists all files currently stored in the system. 
+
+
+
+## How To Run
+
+This project has all been developed in Java using the OpenJDK 20. It will work with any version _**20 or later**_. To install, please visit https://www.oracle.com/uk/java/technologies/downloads/. 
+
+
+
