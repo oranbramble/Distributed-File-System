@@ -90,24 +90,21 @@ java DstoreMain cport
 ```
 STORE filename file_size
 ```
-
-This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
+>This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
 
 ### REMOVE
 
 ```
 REMOVE filename
 ```
-
-This removes the file specified from the file storage system.
+>This removes the file specified from the file storage system.
 
 ### LOAD
 
 ```
 LOAD filename
 ```
-
-This loads the file from the storage system into the current working directory of the command line.
+>This loads the file from the storage system into the current working directory of the command line.
 
 
 ### LIST
@@ -115,5 +112,4 @@ This loads the file from the storage system into the current working directory o
 ```
 LIST
 ```
-
-This lists all files currently stored in the system. 
+>This lists all files currently stored in the system. 
