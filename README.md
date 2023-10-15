@@ -71,3 +71,11 @@ java Dstore port cport timeout file_folder
 > A Dstore is started with the port to listen on (port) and the controller’s port to talk to
 (cport), timeout in milliseconds (timeout) and where to store the data locally
 (file_folder).
+
+For ease of use of the program, I also developed a DstoreMain class, which initialises and runs 5 different Dstores, so the user does not have to start each one manually. This was mainly for testing, but is useful for quick use of the program.
+
+To start DstoreMain, run the following in command line:
+```
+java DstoreMain cport
+```
+> The DstoreMain is started with the Controller's port (cport). The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreX', where X is the number of the Dstore. I.e, the directories will be Store1, Store2, Store3, Store4 and Store5. 
