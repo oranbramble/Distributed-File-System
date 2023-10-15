@@ -78,4 +78,42 @@ To start DstoreMain, run the following in command line:
 ```
 java DstoreMain cport
 ```
-> The DstoreMain is started with the Controller's port (cport). The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreX', where X is the number of the Dstore. I.e, the directories will be Store1, Store2, Store3, Store4 and Store5. 
+> The DstoreMain is started with the Controller's port (cport). The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreX', where X is the number of the Dstore. I.e, the directories will be Store1, Store2, Store3, Store4 and Store5.
+
+
+## Commands
+
+4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
+
+### STORE
+
+```
+STORE filename file_size
+```
+
+This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
+
+### REMOVE
+
+```
+REMOVE filename
+```
+
+This removes the file specified from the file storage system.
+
+### LOAD
+
+```
+LOAD filename
+```
+
+This loads the file from the storage system into the current working directory of the command line.
+
+
+### LIST
+
+```
+LIST
+```
+
+This lists all files currently stored in the system. 
