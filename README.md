@@ -16,6 +16,12 @@ However, the layout and communication concepts are the same for if it was spread
 
 <br/>The components communicate using TCP sockets. Each componnet is given the port to communicate to the Controller with (`cport`), and the Dstores are given a port number to listen on for incoming communication from the Controller. The Controller -> Dstore connections are persistant, and the Client -> Controller connections are not. <br/>
 
+## How to run
+
+This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
+
+To run, clome this git repositroy using the git command in the Command Line Interface for your operating system.
+
 
 ## <br/>Components
 
