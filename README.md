@@ -112,15 +112,15 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 
 </br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines.
 
-</br> One window will be used to run the 'Controller'. In this window, use the following command:
+</br> One window will be used to run the `Controller`. In this window, use the following command:
 
 ```
 java Controller cport R timeout rebalance_period
 ```
-> - 'cport' : Controller Port, the port number which the Controller will listen on
-> - 'R' : Replication Factor, number of a times a file will be replicated over Dstores
-> - 'timeout' : Period, in milliseconds, to wait for communications between components
-> - 'rebalance_peroid' : Peroid, in milliseconds, to wait before starting Rebalance operation again
+> - `cport` : Controller Port, the port number which the Controller will listen on
+> - `R` : Replication Factor, number of a times a file will be replicated over Dstores
+> - `timeout` : Period, in milliseconds, to wait for communications between components
+> - `rebalance_peroid` : Peroid, in milliseconds, to wait before starting Rebalance operation again
 
 
 
