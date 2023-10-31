@@ -157,21 +157,21 @@ java ClientMain cport timeout
 
 4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
 
-**STORE**
+</br>**STORE**
 
 ```
 STORE filename file_size
 ```
 >This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
 
-</br>**REMOVE***
+</br>**REMOVE**
 
 ```
 REMOVE filename
 ```
 >This removes the file specified from the file storage system.
 
-</br>**LOAD***
+</br>**LOAD**
 
 ```
 LOAD filename
@@ -179,7 +179,7 @@ LOAD filename
 >This loads the file from the storage system into the current working directory of the command line.
 
 
-</br>**LIST***
+</br>**LIST**
 
 ```
 LIST
