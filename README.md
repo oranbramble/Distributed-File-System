@@ -141,20 +141,20 @@ And for the `ClientMain`, use the following:
 ```
 java ClientMain cport timeout
 ```
+</br>
 
-
-### Commands
+### Client Commands
 
 4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
 
-### STORE
+**STORE**
 
 ```
 STORE filename file_size
 ```
 >This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
 
-### REMOVE
+</br>* REMOVE *
 
 ```
 REMOVE filename
