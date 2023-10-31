@@ -83,13 +83,13 @@ java Dstore port cport timeout file_folder
 (cport), timeout in milliseconds (timeout) and where to store the data locally
 (file_folder).
 
-For ease of use of the program, I also developed a DstoreMain class, which initialises and runs 5 different Dstores, so the user does not have to start each one manually. This was mainly for testing, but is useful for quick use of the program.
+For ease of use of the program, I also developed a DstoreMain class, which initialises and runs multiple different Dstores, so the user does not have to start each one manually. This was mainly for testing, but is useful for quick use of the program.
 
 To start DstoreMain, run the following in command line:
 ```
-java DstoreMain cport
+java DstoreMain N cport
 ```
-> The DstoreMain is started with the Controller's port (cport). The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreX', where X is the number of the Dstore. I.e, the directories will be Store1, Store2, Store3, Store4 and Store5.
+> The DstoreMain is started with the Controller's port (`cport`) and `N` which specifies how many Dstores to start. The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreN', where N is the number of the Dstore. I.e, for N=5, the directories will be Store1, Store2, Store3, Store4 and Store5.
 
 
 
@@ -102,7 +102,7 @@ java DstoreMain cport
 
 ## How to run
 
-This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
+This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows. The following explanation of running of the program lists commands to be used. For explanations of these, see the above 'Components' section.
 
 
 </br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
@@ -117,12 +117,19 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 java Controller cport R timeout rebalance_period
 ```
-> - `cport` : Controller Port, the port number which the Controller will listen on
-> - `R` : Replication Factor, number of a times a file will be replicated over Dstores
-> - `timeout` : Period, in milliseconds, to wait for communications between components
-> - `rebalance_peroid` : Peroid, in milliseconds, to wait before starting Rebalance operation again
 
 
+</br> Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
+
+```
+java Dstore port cport timeout file_folder
+```
+
+Or, one Command line Interface window may be used and the following command run:
+
+```
+java DstoreMain N cport
+```
 
 
 
