@@ -106,9 +106,11 @@ java DstoreMain cport timeout N
 
 This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows. The following explanation of running of the program lists commands to be used. For explanations of these, see the above 'Components' section.
 
+</br>
+
 ### Starting up
 
-</br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
+To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
 ```
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
