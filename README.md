@@ -19,9 +19,9 @@ However, the layout and communication concepts are the same for if it was spread
 ## How to run
 
 This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
+</br>
 
-
-To run, clome this git repositroy using the git command in the Command Line Interface for your operating system.
+To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
 ```
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
