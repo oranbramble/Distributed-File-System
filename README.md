@@ -121,19 +121,28 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 > Cloning of the repository as shown on a Windows Command Line
 
 
-</br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
+</br> 
+</br>
 
-</br> One window will be used to run the `Controller`. This must be run first before any other component, as they will all look to connect to the Controller on the `cport`. In a Command Line Interface window, use the following command:
+Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
+
+</br>
+
+One window will be used to run the `Controller`. This must be run first before any other component, as they will all look to connect to the Controller on the `cport`. In a Command Line Interface window, use the following command:
 
 ```
 java Controller/Controller cport R timeout rebalance_period
 ```
+
 </br>
 
 ![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/5d509138-a992-498b-85f4-8610be51a5e5)
 > Starting the `Controller` component and showing an immediate Rebalance operation with 0 `Dstores` connected
 
-</br> Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
+</br> 
+</br>
+
+Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
 
 ```
 java DStore/Dstore port cport timeout file_folder
@@ -144,12 +153,16 @@ Or, one Command line Interface window may be used and the following command run:
 ```
 java DStore/DstoreMain cport timeout N
 ```
+
 </br>
 
 ![DstoreMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/733d6542-a40e-4093-95a7-e670fc182bc9)
 > `DstoreMain` initialisation with N=3, so 3 `Dstores` are started and connected to the `Controller` on port 1000
 
-</br> Next a `Client` can be run to operate commands. Usually, `Client` will only serve one command before closing the connection. To run multiple commands, the `ClientMain` can be used (this is recommended). For the `Client`, run the following command line command:
+</br>
+</br>
+
+Next a `Client` can be run to operate commands. Usually, `Client` will only serve one command before closing the connection. To run multiple commands, the `ClientMain` can be used (this is recommended). For the `Client`, run the following command line command:
 ```
 java Client/Client cport timeout
 ```
@@ -163,6 +176,7 @@ java Client/ClientMain cport timeout
 ![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/6ea5d4fe-f2e9-42da-a224-8565966098c4)
 > The starting of `ClientMain` which doesn't connect immediately to the `Controller`, as this is done by the individual `Clients` when a command is typed.
 
+</br>
 </br>
 Once you have all the components up and running, commands can be run from the `ClientMain` to manipulate the file storage system. These different commands are listed below.
 
