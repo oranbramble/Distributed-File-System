@@ -115,7 +115,7 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 
-</br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines.
+</br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
 
 </br> One window will be used to run the `Controller`. This must be run first before any other component, as they will all look to connect to the Controller on the `cport`. In a Command Line Interface window, use the following command:
 
@@ -155,14 +155,14 @@ java ClientMain cport timeout
 
 </br>
 
-4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
+4 commmands are used on the `Client` or `ClientMain` in order to manipulate files on the system. The commands are as listed below.
 
 </br>**STORE**
 
 ```
 STORE filename file_size
 ```
->This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command's line current working directory. the `file_size` is the size of the file in bytes.
+>This communicates to the Controller that we want to store file `filename`. This file must be in the same directory as the command line's current working directory. the `file_size` is the size of the file in bytes.
 
 </br>**REMOVE**
 
