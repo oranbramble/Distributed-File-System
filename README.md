@@ -126,6 +126,11 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 
 Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
 
+<br/>
+
+![CMD windows](https://github.com/oranbramble/Distributed-File-System/assets/56357864/231af2d8-4250-40ab-90ca-5b8a4ca73852)
+
+</br>
 </br>
 
 One window will be used to run the `Controller`. This must be run first before any other component, as they will all look to connect to the Controller on the `cport`. In a Command Line Interface window, use the following command:
