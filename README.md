@@ -114,38 +114,42 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 ```
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
+![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/7f68ed21-ab24-45b9-a4bf-8629dc377e0c)
+
 
 </br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
 
 </br> One window will be used to run the `Controller`. This must be run first before any other component, as they will all look to connect to the Controller on the `cport`. In a Command Line Interface window, use the following command:
 
 ```
-java Controller cport R timeout rebalance_period
+java Controller/Controller cport R timeout rebalance_period
 ```
 
 
 </br> Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
 
 ```
-java Dstore port cport timeout file_folder
+java DStore/Dstore port cport timeout file_folder
 ```
 
 Or, one Command line Interface window may be used and the following command run:
 
 ```
-java DstoreMain cport timeout N
+java DStore/DstoreMain cport timeout N
 ```
 
 </br> Next a `Client` can be run to operate commands. Usually, `Client` will only serve one command before closing the connection. To run multiple commands, the `ClientMain` can be used (this is recommended). For the `Client`, run the following command line command:
 ```
-java Client cport timeout
+java Client/Client cport timeout
 ```
 
 And for the `ClientMain`, use the following:
 ```
-java ClientMain cport timeout
+java Client/ClientMain cport timeout
 ```
 
+
+Once you have all the components up and running, commands can be run from the `ClientMain` to manipulate the file storage system. These different commands are listed below.
 
 
 
