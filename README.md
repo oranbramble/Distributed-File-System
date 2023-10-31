@@ -106,8 +106,6 @@ java DstoreMain cport timeout N
 
 This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows. The following explanation of running of the program lists commands to be used. For explanations of these, see the above 'Components' section.
 
-</br>
-
 ### Starting up
 
 </br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
@@ -180,11 +178,10 @@ java Client/ClientMain cport timeout
 ![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/6ea5d4fe-f2e9-42da-a224-8565966098c4)
 > The starting of `ClientMain` which doesn't connect immediately to the `Controller`, as this is done by the individual `Clients` when a command is typed.
 
+
 </br>
-</br>
+
 Once you have all the components up and running, commands can be run from the `ClientMain` to manipulate the file storage system. These different commands are listed below.
-
-
 
 </br>
 
