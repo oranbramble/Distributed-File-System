@@ -115,7 +115,10 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 
+</br>
+
 ![cloning](https://github.com/oranbramble/Distributed-File-System/assets/56357864/ace782b8-91f6-4434-9c69-be65ceca319f)
+> Cloning of the repository as shown on a Windows Command Line
 
 
 </br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
@@ -128,7 +131,7 @@ java Controller/Controller cport R timeout rebalance_period
 </br>
 
 ![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/5d509138-a992-498b-85f4-8610be51a5e5)
-
+> Starting the `Controller` component and showing an immediate Rebalance operation with 0 `Dstores` connected
 
 </br> Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
 
