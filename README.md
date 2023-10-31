@@ -131,7 +131,15 @@ Or, one Command line Interface window may be used and the following command run:
 java DstoreMain cport timeout N
 ```
 
+</br> Next a `Client` can be run to operate commands. Usually, `Client` will only serve one command before closing the connection. To run multiple commands, the `ClientMain` can be used (this is recommended). For the `Client`, run the following command line command:
+```
+java Client cport timeout
+```
 
+And for the `ClientMain`, use the following:
+```
+java ClientMain cport timeout
+```
 
 
 
