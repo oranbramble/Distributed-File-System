@@ -87,9 +87,9 @@ For ease of use of the program, I also developed a DstoreMain class, which initi
 
 To start DstoreMain, run the following in command line:
 ```
-java DstoreMain N cport
+java DstoreMain cport timeout N
 ```
-> The DstoreMain is started with the Controller's port (`cport`) and `N` which specifies how many Dstores to start. The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreN', where N is the number of the Dstore. I.e, for N=5, the directories will be Store1, Store2, Store3, Store4 and Store5.
+> The DstoreMain is started with the Controller's port (`cport`), the time to wait before exiting (`timeout`), and `N` which specifies how many Dstores to start. The `file_folder` for each is 'StoreN', where N is the number of the Dstore. I.e, for N=5, the directories will be Store1, Store2, Store3, Store4 and Store5. Also, the `port` for the Dstore is automatically set to 500 + n. E.g, for N=5, each Dstore will have the port 501, 502, 503, 504 and 505 respectively. 
 
 
 
