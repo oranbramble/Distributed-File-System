@@ -16,18 +16,12 @@ However, the layout and communication concepts are the same for if it was spread
 
 <br/>The components communicate using TCP sockets. Each componnet is given the port to communicate to the Controller with (`cport`), and the Dstores are given a port number to listen on for incoming communication from the Controller. The Controller -> Dstore connections are persistant, and the Client -> Controller connections are not. <br/>
 
-## How to run
-
-This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
-
-
-</br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
-```
-git clone https://github.com/oranbramble/Distributed-File-System.git
-```
-
 
 ## <br/>Components
+
+
+
+
 
 ### <br/>Controller
 
@@ -43,6 +37,10 @@ java Controller cport R timeout rebalance_period
 > A Controller is given a port to listen on (cport), a replication factor (R), a
 timeout in milliseconds (timeout) and how long to wait (in milliseconds) to start the next
 rebalance operation (rebalance_period)
+
+
+
+
 
 ### <br/>Client
 
@@ -69,6 +67,9 @@ To start a ClientMain, the following command line parameters are used:
 java ClientMain cport timeout
 ```
 
+
+
+
 ### <br/>Dstore
 
 These are the storage programs for storing files. They receive files to store directly from Clients when Clients send `STORE` command, and save them to the `file_folder` directory. They also send Clients file contents after receiving a `LOAD` operation from a Client, as well as removing a file when receiving a `REMOVE` command from the Controller. They also handle internal `REBALANCE` commands needed for the Rebalance operation.
@@ -89,6 +90,43 @@ To start DstoreMain, run the following in command line:
 java DstoreMain cport
 ```
 > The DstoreMain is started with the Controller's port (cport). The `timeout` is automatically set to 5 seconds, and the `file_folder` for each is 'StoreX', where X is the number of the Dstore. I.e, the directories will be Store1, Store2, Store3, Store4 and Store5.
+
+
+
+
+
+
+
+
+
+
+## How to run
+
+This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
+
+
+</br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
+```
+git clone https://github.com/oranbramble/Distributed-File-System.git
+```
+
+</br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines.
+
+</br> One window will be used to run the 'Controller'. In this window, use the following command:
+
+```
+java Controller cport R timeout rebalance_period
+```
+> - 'cport' : Controller Port, the port number which the Controller will listen on
+> - 'R' : Replication Factor, number of a times a file will be replicated over Dstores
+> - 'timeout' : Period, in milliseconds, to wait for communications between components
+> - 'rebalance_peroid' : Peroid, in milliseconds, to wait before starting Rebalance operation again
+
+
+
+
+
+
 
 
 ## Commands
@@ -126,9 +164,7 @@ LIST
 
 
 
-## How To Run
 
-This project has all been developed in Java using the OpenJDK 20. It will work with any version _**20 or later**_. To install, please visit https://www.oracle.com/uk/java/technologies/downloads/. 
 
 
 
