@@ -125,7 +125,8 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 java Controller/Controller cport R timeout rebalance_period
 ```
-<lbr>
+</br>
+
 ![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/5d509138-a992-498b-85f4-8610be51a5e5)
 
 
@@ -141,6 +142,7 @@ Or, one Command line Interface window may be used and the following command run:
 java DStore/DstoreMain cport timeout N
 ```
 </br>
+
 ![DstoreMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/733d6542-a40e-4093-95a7-e670fc182bc9)
 
 
@@ -154,6 +156,7 @@ And for the `ClientMain`, use the following:
 java Client/ClientMain cport timeout
 ```
 </br>
+
 ![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/6ea5d4fe-f2e9-42da-a224-8565966098c4)
 
 
