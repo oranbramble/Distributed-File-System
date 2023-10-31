@@ -23,7 +23,7 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 
 To run, clome this git repositroy using the git command in the Command Line Interface for your operating system.
 ```
-git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY
+git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 
 
