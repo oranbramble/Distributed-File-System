@@ -104,6 +104,7 @@ java DstoreMain cport timeout N
 
 This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows. The following explanation of running of the program lists commands to be used. For explanations of these, see the above 'Components' section.
 
+### Starting up
 
 </br>To run, clone this git repositroy using the git command in the Command Line Interface for your operating system.
 ```
@@ -142,12 +143,7 @@ java ClientMain cport timeout
 ```
 
 
-
-
-
-
-
-## Commands
+### Commands
 
 4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
 
