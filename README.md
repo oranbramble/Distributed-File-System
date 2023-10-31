@@ -20,7 +20,11 @@ However, the layout and communication concepts are the same for if it was spread
 
 This program has been made wholly in Java, so requires the Java JDK package to be installed. To download this, visit https://www.oracle.com/uk/java/technologies/downloads/#jdk21-windows.
 
+
 To run, clome this git repositroy using the git command in the Command Line Interface for your operating system.
+```
+git clone https://github.com/YOUR-USERNAME/YOUR-REPOSITORY
+```
 
 
 ## <br/>Components
