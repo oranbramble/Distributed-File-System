@@ -114,7 +114,8 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 ```
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
-![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/7f68ed21-ab24-45b9-a4bf-8629dc377e0c)
+
+![cloning](https://github.com/oranbramble/Distributed-File-System/assets/56357864/ace782b8-91f6-4434-9c69-be65ceca319f)
 
 
 </br> Once cloned, multiple different Command Line Interface windows must be openend, with each running a separate component of this system. This mimics the components running on separate machines. Each window must be navigated to the `Distributed-File-System\out\production\Distributed-File-System` directory before any of the commands may be used.
@@ -124,6 +125,8 @@ git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 java Controller/Controller cport R timeout rebalance_period
 ```
+
+![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/5d509138-a992-498b-85f4-8610be51a5e5)
 
 
 </br> Once a `Controller` is running, other components can be started. However, no `Client` requests will be served until `R` `Dstores` have joined the system. Therefore, next the `Dstore`s should be started. To do this, either N windows can be opened, and within each the following command can be run:
@@ -138,6 +141,9 @@ Or, one Command line Interface window may be used and the following command run:
 java DStore/DstoreMain cport timeout N
 ```
 
+![DstoreMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/733d6542-a40e-4093-95a7-e670fc182bc9)
+
+
 </br> Next a `Client` can be run to operate commands. Usually, `Client` will only serve one command before closing the connection. To run multiple commands, the `ClientMain` can be used (this is recommended). For the `Client`, run the following command line command:
 ```
 java Client/Client cport timeout
@@ -147,6 +153,9 @@ And for the `ClientMain`, use the following:
 ```
 java Client/ClientMain cport timeout
 ```
+
+![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/6ea5d4fe-f2e9-42da-a224-8565966098c4)
+
 
 
 Once you have all the components up and running, commands can be run from the `ClientMain` to manipulate the file storage system. These different commands are listed below.
