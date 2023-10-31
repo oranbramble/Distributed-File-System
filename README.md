@@ -128,7 +128,7 @@ java Dstore port cport timeout file_folder
 Or, one Command line Interface window may be used and the following command run:
 
 ```
-java DstoreMain N cport
+java DstoreMain cport timeout N
 ```
 
 
