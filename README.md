@@ -145,9 +145,15 @@ And for the `ClientMain`, use the following:
 ```
 java ClientMain cport timeout
 ```
+
+
+
+
 </br>
 
 ### Client Commands
+
+</br>
 
 4 commmands are used on the Client or ClientMain in order to manipulate files on the system. The commands are as listed below.
 
