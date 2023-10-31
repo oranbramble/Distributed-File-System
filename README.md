@@ -115,8 +115,6 @@ This program has been made wholly in Java, so requires the Java JDK package to b
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 
-</br>
-
 ![cloning](https://github.com/oranbramble/Distributed-File-System/assets/56357864/ace782b8-91f6-4434-9c69-be65ceca319f)
 > Cloning of the repository as shown on a Windows Command Line
 
@@ -129,6 +127,7 @@ Once cloned, multiple different Command Line Interface windows must be openend, 
 <br/>
 
 ![CMD windows](https://github.com/oranbramble/Distributed-File-System/assets/56357864/231af2d8-4250-40ab-90ca-5b8a4ca73852)
+> Showing the `Controller`, `DstoreMain` and `ClientMain` running on separate Windows CMD programs. This is how this program has to be run, it cannot be used all on one Command Line program.
 
 </br>
 </br>
