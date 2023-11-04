@@ -190,7 +190,7 @@ Once you have all the components up and running, commands can be run from the `C
 ### Client Commands
 
 
-4 commmands are used on the `Client` or `ClientMain` in order to manipulate files on the system. The commands are as listed below.
+4 commmands are used on the `Client` or `ClientMain` in order to manipulate files on the system. These are the only commands that can be used for the system. To use, enter the commands in the Command Line Interface which is running the `ClientMain` component. The commands are as listed below.
 
 
 </br>**STORE**
