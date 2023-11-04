@@ -1,8 +1,6 @@
 package IndexManager;
 
-import DStore.Dstore;
-import Tokenizer.RemoveAckToken;
-import Tokenizer.StoreAckToken;
+import Tokenizer.*;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -11,7 +9,7 @@ public class IndexManager {
     private volatile ConcurrentHashMap<String, ArrayList<Integer>> expectedStoreAcksMap;
     private volatile ConcurrentHashMap<String, ArrayList<Integer>> expectedRemoveAcksMap;
     private volatile ConcurrentHashMap<String, DstoreFile> files;
-  //  private volatile ConcurrentHashMap<String, ArrayList<Integer>> fileToDstoreMap;
+    //  private volatile ConcurrentHashMap<String, ArrayList<Integer>> fileToDstoreMap;
 
 
     public IndexManager() {
@@ -22,6 +20,26 @@ public class IndexManager {
 
     public DstoreFile getFile(String filename) {
         return this.files.get(filename);
+    }
+
+    public void addDstoreForFile(String filename, Integer dstore) {
+        DstoreFile fileToUpdate = this.files.get(filename);
+        if (fileToUpdate != null) {
+            fileToUpdate.getDstoresStoredOn().add(dstore);
+        }
+    }
+
+    public void removeDstoreForFile(String filename, Integer dstore) {
+        DstoreFile fileToUpdate = this.files.get(filename);
+        if (fileToUpdate != null) {
+            fileToUpdate.getDstoresStoredOn().remove(Integer.valueOf(dstore));
+        }
+    }
+
+    public void addFile(String filename, int filesize, DstoreFile.State state, ArrayList<Integer> dstoresStoredOn) {
+        DstoreFile fileToAdd = new DstoreFile(filename, filesize, state);
+        fileToAdd.setDstoresStoredOn(dstoresStoredOn);
+        this.files.put(filename, fileToAdd);
     }
 
     public ArrayList<DstoreFile> getFileObjects() {
@@ -92,7 +110,7 @@ public class IndexManager {
      */
     public synchronized boolean startStoring(String filename, int filesize) {
         if (this.files.containsKey(filename)) {
-           return false;
+            return false;
         } else {
             this.files.put(filename, new DstoreFile(filename, filesize, DstoreFile.State.STORE_IN_PROGRESS));
             return true;
@@ -198,7 +216,7 @@ public class IndexManager {
     }
 
     public synchronized boolean removeAckReceived(RemoveAckToken ackToken, Integer portOfDstore) {
-     //  System.out.println("PORTS EXP : " + this.expectedRemoveAcksMap);
+        //  System.out.println("PORTS EXP : " + this.expectedRemoveAcksMap);
         if (this.expectedRemoveAcksMap.containsKey(ackToken.filename)) {
             if (this.expectedRemoveAcksMap.get(ackToken.filename).contains(portOfDstore)) {
                 this.expectedRemoveAcksMap.get(ackToken.filename).remove(portOfDstore);

@@ -1,14 +1,13 @@
 package Controller;
 
-import IndexManager.*;
-import ConnectionParent.ConnectionParent;
-import Loggers.ControllerLogger;
-import Loggers.Protocol;
-import Tokenizer.*;
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+
+import Tokenizer.*;
+import Loggers.*;
+import ConnectionParent.ConnectionParent;
 
 public class ControllerClientConnection extends ConnectionParent {
 
@@ -87,9 +86,8 @@ public class ControllerClientConnection extends ConnectionParent {
                     }
                 }
             }
-        //When client disconnects, we ignore it as this thread will now end
-        } catch (IOException e) {
-            System.out.println("ERROR WITH CONNECTION");
+            //When client disconnects, we ignore it as this thread will now end
+        } catch (IOException ignored) {
         }
 
     }
@@ -121,7 +119,7 @@ public class ControllerClientConnection extends ConnectionParent {
         if (reqToken instanceof ListToken) {
             String message = this.controller.getFilesForList();
             this.sendToClient(reqToken, message);
-        //If request is a store, call handleStore method to handle request
+            //If request is a store, call handleStore method to handle request
         } else if (reqToken instanceof StoreToken) {
             this.handleStore(reqToken);
         } else if (reqToken instanceof RemoveToken) {
@@ -146,17 +144,17 @@ public class ControllerClientConnection extends ConnectionParent {
         //If request to controller was a list, we are sending back a LIST filename1 filename2 ... message
         if (reqToken instanceof ListToken) {
             message = Protocol.LIST_TOKEN + message;
-        //If request was store, we are sending back a STORE_TO port1 port2 port3 ... message
+            //If request was store, we are sending back a STORE_TO port1 port2 port3 ... message
         } else if (reqToken instanceof StoreToken) {
             message = Protocol.STORE_TO_TOKEN + message;
-        //This catches messages where we don't want to send any data back to the client
-        //Technically, not needed, just thought it shows all the messages we are sending to client to make it clear
-        //what data goes to and from
-        } else if (reqToken instanceof  StoreCompleteToken ||
-                   reqToken instanceof FileAlreadyExistsToken ||
-                   reqToken instanceof NotEnoughDStoresToken ||
-                   reqToken instanceof FileNotExistToken ||
-                   reqToken instanceof RemoveCompleteToken) {
+            //This catches messages where we don't want to send any data back to the client
+            //Technically, not needed, just thought it shows all the messages we are sending to client to make it clear
+            //what data goes to and from
+        } else if (reqToken instanceof StoreCompleteToken ||
+                reqToken instanceof FileAlreadyExistsToken ||
+                reqToken instanceof NotEnoughDStoresToken ||
+                reqToken instanceof FileNotExistToken ||
+                reqToken instanceof RemoveCompleteToken) {
         }
         //Here the message actually gets sent to the client
         this.outText.println(message);
@@ -172,6 +170,7 @@ public class ControllerClientConnection extends ConnectionParent {
     private void handleStore(Token req) {
         String filename = ((StoreToken)req).filename;
         int filesize = ((StoreToken)req).filesize;
+        // CORRECT FILESIZE
         this.controller.store(filename, filesize, this);
     }
 

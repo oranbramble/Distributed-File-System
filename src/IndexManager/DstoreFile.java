@@ -4,8 +4,8 @@ import java.util.ArrayList;
 
 public class DstoreFile {
 
-    private String filename;
-    private int filesize;
+    private final String filename;
+    private final int filesize;
     private State state;
     private ArrayList<Integer> DstoresStoredOn;
 
@@ -17,15 +17,15 @@ public class DstoreFile {
     }
 
     public String getFilename() {
-        return filename;
+        return this.filename;
     }
 
     public int getFilesize() {
-        return filesize;
+        return this.filesize;
     }
 
     public State getState() {
-        return state;
+        return this.state;
     }
 
     public void setState(State state) {
@@ -33,11 +33,11 @@ public class DstoreFile {
     }
 
     public ArrayList<Integer> getDstoresStoredOn() {
-        return DstoresStoredOn;
+        return this.DstoresStoredOn;
     }
 
     public void setDstoresStoredOn(ArrayList<Integer> dstoresStoredOn) {
-        DstoresStoredOn = dstoresStoredOn;
+        this.DstoresStoredOn = dstoresStoredOn;
     }
 
     public enum State {

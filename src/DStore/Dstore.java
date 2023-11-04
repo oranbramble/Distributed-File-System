@@ -1,10 +1,9 @@
 package DStore;
 
-import Loggers.DstoreLogger;
-import Loggers.Logger;
-import Loggers.Protocol;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,11 +12,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import Loggers.DstoreLogger;
+import Loggers.Logger;
+
 public class Dstore {
 
-    private int port;
-    private int timeout;
-    private File fileFolder;
+    private final int port;
+    private final int timeout;
+    private final File fileFolder;
     private DstoreToControllerConnection controllerConnection;
 
     public Dstore(int port, int cPort, int timeout, String fileFolder) throws IOException {
@@ -26,13 +28,13 @@ public class Dstore {
         this.fileFolder = new File(fileFolder);
         this.fileFolder.mkdir();
 
-      //  DstoreLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY, this.port);
+        DstoreLogger.init(Logger.LoggingType.ON_FILE_AND_TERMINAL, this.port);
 
         //Tries to join controller and set up connection with it, and then starts listening for other connections
         try {
             Socket controllerSocket = new Socket(InetAddress.getLocalHost(), cPort);
             this.joinController(controllerSocket);
-            this.startListening(cPort);
+            this.startListening();
         } catch (IOException e) {
             System.out.println("### DSTORE ERROR ###    TCP Connection to Controller failed");
         }
@@ -42,11 +44,11 @@ public class Dstore {
         this.controllerConnection = new DstoreToControllerConnection(s, this.port, this);
     }
 
-    private void startListening(int cPort) throws IOException {
+    private void startListening() throws IOException {
         ServerSocket listener = new ServerSocket(this.port);
         while (true) {
             Socket connection = listener.accept();
-            new DstoreClientConnection(connection, this, cPort, this.timeout).start();
+            new DstoreClientConnection(connection, this, this.timeout).start();
         }
     }
 
@@ -99,6 +101,19 @@ public class Dstore {
             return new ArrayList<>();
         }
 
+    }
+
+    public int getFilesize(String filename) {
+        File f = new File(this.fileFolder.getPath() + "/" + filename);
+        if (f.exists()) {
+            return ((int)f.length());
+        } else {
+            return -1;
+        }
+    }
+
+    public void end() {
+        System.exit(0);
     }
 
     /** Args layout:

@@ -1,25 +1,17 @@
 package Controller;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.PortUnreachableException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-import IndexManager.*;
-import Loggers.ControllerLogger;
-import Loggers.Logger;
-import Loggers.Protocol;
 import Tokenizer.*;
-
-import javax.sound.sampled.ReverbType;
-
+import Loggers.*;
+import IndexManager.*;
 
 public class Controller {
 
@@ -32,6 +24,7 @@ public class Controller {
     private IndexManager fileIndex;
     private Map<Integer, ControllerToDStoreConnection> dStoreConnectionMap;
     private ArrayList<ControllerToDStoreConnection> dStores;
+    private ArrayList<Integer> rebalanceCompletesExpected;
 
     public Controller(int cPort, int R, int timeout, int rebalancePeriod) throws IOException {
         this.cPort = cPort;
@@ -41,8 +34,9 @@ public class Controller {
         this.dStoreConnectionMap = Collections.synchronizedMap(new HashMap<>());
         this.fileIndex = new IndexManager();
         this.dStores = new ArrayList<>();
+        this.rebalanceCompletesExpected = new ArrayList<>();
 
-        ControllerLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY);
+        ControllerLogger.init(Logger.LoggingType.ON_FILE_AND_TERMINAL);
     }
 
     public void startListening() throws IOException {
@@ -83,7 +77,7 @@ public class Controller {
 
     private void handleFirstRequest(Token token, Socket s) throws IOException {
         //We tokenize the first command received. Then run checks on it to see what type of request it is.
-        //If its a JOIN, we know the connection is a Dstore trying to join for the first time
+        //If it's a JOIN, we know the connection is a Dstore trying to join for the first time
         //If its none of these, it must be a client request.
         if (token instanceof JoinToken) {
             //If Dstore joining, log the join and save the port
@@ -94,7 +88,7 @@ public class Controller {
             this.dStoreConnectionMap.put(dstorePort, dstoreConnection);
 
         } else if (token != null) {
-            //If its a client request, create a new connection thread to handle that
+            //If it's a client request, create a new connection thread to handle that
             //request and further requests from that client
             new ControllerClientConnection(s, token, this).start();
         }
@@ -104,16 +98,48 @@ public class Controller {
         if (!this.ifRebalancing) {
             //Waits for all files to be available before starting the rebalance operation
             while (!this.fileIndex.checkIfAllAvailable()) {}
-            System.out.println();
-            System.out.println("REBALANCE START AT : " + System.currentTimeMillis());
+            // Sets current rebalancing state to true
             this.ifRebalancing = true;
-            this.rebalancer = new Rebalancer(this.timeout);
-            this.rebalancer.rebalance(this.fileIndex.getFileObjects(),this.dStoreConnectionMap, this.R);
-            System.out.println();
-            System.out.println("FINISHED REBALANCE AT : " + System.currentTimeMillis());
-            System.out.println();
-            this.ifRebalancing = false;
+            // Creates rebalancer object used for rebalancing
+            this.rebalancer = new Rebalancer(this.timeout, this.fileIndex);
+
+            // Next line runs rebalance operation logic
+            // This checks if we need to move any files around (i.e., removing files from some Dstores and/or sending
+            // files between Dstores) in order to keep Dstores balanced. It generates the instructions that need to be
+            // sent to Dstores which tell the Dstores what files to remove or send to other Dstores.
+            // These instructions are returned in the form of a hashmap mapping from each Dstore port number to that
+            // Dstores instructions.
+            ConcurrentHashMap<Integer, RebalanceInstruction> instructions =
+                    this.rebalancer.rebalance(this.dStoreConnectionMap, this.R);
+
+            // If logical rebalance operation succeeded, we carry out the instructions generated from this
+            // to implement the changes of the rebalance operation.
+            if (instructions != null) {
+                this.executeRebalanceInstructions(instructions);
+                this.ifRebalancing = false;
+            }
         }
+    }
+
+    public void executeRebalanceInstructions(ConcurrentHashMap<Integer, RebalanceInstruction> instructions) {
+        for (Integer dstorePort : instructions.keySet()) {
+            String instruction = instructions.get(dstorePort).getInstruction();
+            this.dStoreConnectionMap.get(dstorePort).sendMessageToDstore(instruction);
+        }
+    }
+
+    private void listenForRebalanceCompletes() {
+        double timeoutStamp = System.currentTimeMillis() + this.timeout;
+        while (this.rebalanceCompletesExpected.size() > 0) {
+            if (timeoutStamp < System.currentTimeMillis()) {
+                System.out.println("--- TIMEOUT ---  Controller timed out waiting for REBALANCE_COMPLETE");
+                break;
+            }
+        }
+    }
+
+    public void rebalanceCompleteReceived(int port) {
+        this.rebalanceCompletesExpected.remove(Integer.valueOf(port));
     }
 
     public boolean getIfRebalancing() {
@@ -164,6 +190,7 @@ public class Controller {
         this.fileIndex.addStoreAcksForFile(fileToStore, intPorts);
         //Tells controller to start listening for the STORE_ACKs, returns true if all the acks are received within
         //the controller's timeout period
+        System.out.println(this.fileIndex.getFile(fileToStore).getFilesize());
         boolean ifAcksReceived = this.ifAllStoreAcksReceived(fileToStore, intPorts);
         if (ifAcksReceived) {
             //If all the store acks are received, we send a STORE_COMPLETE to client
@@ -213,6 +240,8 @@ public class Controller {
     public ArrayList<Integer> load(String filename, ControllerClientConnection clientConnection) {
         //If our list of files does not contain requested file, return FILE_DOES_NOT_EXIST error to client and end
         //execution of load instruction
+        System.out.println();
+        System.out.println(this.fileIndex.getFile(filename).getFilesize());
         if (!this.fileIndex.getStoredFilenames().contains(filename)) {
             clientConnection.sendToClient(new FileNotExistToken(null), Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
             return null;
@@ -228,6 +257,8 @@ public class Controller {
             allDstoresStoringFile.remove(portToLoadFrom);
             //Gets filesize to send top client
             int filesize = this.fileIndex.getFile(filename).getFilesize();
+            System.out.println(filename);
+            System.out.println(filesize);
             //If returned size is -1, there file does not exist at this point (remove concurrency error)
             if (filesize != -1) {
                 //Creates and sends message to client
@@ -251,19 +282,54 @@ public class Controller {
      * @param filename
      * @return ports: returns string of port numbers, where each port number is separated by spaces
      */
-    public String getPortsForStore(String filename) {
+    public synchronized String getPortsForStore(String filename) {
         try {
+            HashMap<Integer, ArrayList<String>> dstoreFilesMap = this.getDstoreFilesMap();
+            ArrayList<Integer> portsToSendList = new ArrayList<>();
+            for (Integer dstore1 : dstoreFilesMap.keySet()) {
+                Integer leastFullDstore =  dstore1;
+                for (Integer dstore2 : dstoreFilesMap.keySet()) {
+                    if (portsToSendList.contains(leastFullDstore)) {
+                        leastFullDstore = dstore2;
+                    } else if (dstoreFilesMap.get(leastFullDstore).size() > dstoreFilesMap.get(dstore2).size() && !portsToSendList.contains(dstore2)) {
+                        leastFullDstore = dstore2;
+                    }
+                }
+                portsToSendList.add(leastFullDstore);
+            }
+
             StringBuilder portsToSend = new StringBuilder();
-            for (int x = 0; x < this.R; x++) {
-                int port = this.dStores.get(x).getDstorePort();
-                portsToSend.append(" ").append(port);
+            int rCounter = this.R;
+            for (Integer port : portsToSendList) {
+                if (!dstoreFilesMap.get(port).contains(filename)) {
+                    portsToSend.append(" ").append(port);
+                    rCounter -= 1;
+                }
+                if (rCounter == 0) { break;}
             }
             return portsToSend.toString();
 
         } catch (NullPointerException e) {
+            System.out.println("### ERROR ###   Getting Dstore ports for store failed");
             //If exception thrown, then there is not enough Dstores to store on, so we return null
             return null;
         }
+    }
+
+    private HashMap<Integer, ArrayList<String>> getDstoreFilesMap() {
+        HashMap<Integer, ArrayList<String>> map = new HashMap<>();
+        for (Integer dstore : this.dStoreConnectionMap.keySet()) {
+            map.put(dstore, new ArrayList<>());
+        }
+        for (DstoreFile f : this.fileIndex.getFileObjects()) {
+            for (Integer dstoreWhereFileIsStored : f.getDstoresStoredOn()) {
+                if (map.containsKey(dstoreWhereFileIsStored)) {
+                    map.get(dstoreWhereFileIsStored).add(f.getFilename());
+                }
+            }
+
+        }
+        return map;
     }
 
     public int getFilesize(String filename) {

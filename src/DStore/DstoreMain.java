@@ -10,7 +10,6 @@ public class DstoreMain {
 
     // DstoreMain cport timeout N
     public static void main(String[] args) throws IOException {
-        DstoreLogger.init(Logger.LoggingType.ON_TERMINAL_ONLY, 5000);
         int cport = Integer.parseInt(args[0]);
         int timeout = Integer.parseInt(args[1]);
         int N = Integer.parseInt(args[2]);

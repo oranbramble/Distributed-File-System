@@ -1,21 +1,19 @@
 package Controller;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-import java.util.concurrent.TimeoutException;
 
-import ConnectionParent.*;
-import Loggers.ControllerLogger;
-import Loggers.Protocol;
 import Tokenizer.*;
+import ConnectionParent.ConnectionParent;
+import Loggers.*;
 
 /**
  * Class to handle connection from controller to DStore (acts as interface between controller and DStore)
  */
-public class ControllerToDStoreConnection extends ConnectionParent{
+public class ControllerToDStoreConnection extends ConnectionParent {
 
     private int dStorePort;
     private Controller controller;
@@ -47,14 +45,16 @@ public class ControllerToDStoreConnection extends ConnectionParent{
                     }
                     String msg = this.inText.readLine();
                     ControllerLogger.getInstance().messageReceived(this.socket, msg);
-                    Token msgToken = Tokenizer.getToken(msg);
                     //If we are rebalancing, que requests
                     if (msg != null) {
+                        Token msgToken = Tokenizer.getToken(msg);
                         if (msgToken instanceof FileListToken) {
                             this.controller.listReceived(((FileListToken) msgToken), this.dStorePort);
                         } else if (msgToken instanceof ListToken) {
                             FileListToken token = new FileListToken(Protocol.LIST_TOKEN, new StringTokenizer(""));
                             this.controller.listReceived(token, this.dStorePort);
+                        } else if (msgToken instanceof RebalanceCompleteToken) {
+                            this.controller.rebalanceCompleteReceived(this.dStorePort);
                         } else if (this.controller.getIfRebalancing()) {
                             this.queuedRequests.add(msgToken);
                         } else {
@@ -82,10 +82,14 @@ public class ControllerToDStoreConnection extends ConnectionParent{
         } else if (msgToken instanceof RemoveAckToken) {
             this.controller.removeAckReceived((RemoveAckToken) msgToken, this.dStorePort);
         }else if (msgToken instanceof FileListToken) {
-            this.controller.listReceived((FileListToken)msgToken, this.dStorePort);
+            this.controller.listReceived((FileListToken) msgToken, this.dStorePort);
+        } else if (msgToken instanceof RebalanceCompleteToken) {
+
         } else if (msgToken instanceof FileNotExistFilenameToken) {
             FileNotExistFilenameToken t = (FileNotExistFilenameToken)msgToken;
             System.out.println("### ERROR ###   File " + t.filename + " does not exist on Dstore (port: " + this.dStorePort);
+        } else if (msgToken == null) {
+            System.out.println("### ERROR ###   Malformed input received by Controller from Dstore");
         }
     }
 

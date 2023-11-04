@@ -1,17 +1,17 @@
 package DStore;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 
-import ConnectionParent.*;
-import Loggers.DstoreLogger;
-import Loggers.Protocol;
+import Loggers.*;
+import ConnectionParent.ConnectionParent;
 import Tokenizer.*;
 
 public class DstoreToControllerConnection extends ConnectionParent{
 
-    private Dstore dstore;
+    private final Dstore dstore;
 
     public DstoreToControllerConnection(Socket s, int dStorePort, Dstore dstore) throws IOException {
         super(s);
@@ -35,23 +35,28 @@ public class DstoreToControllerConnection extends ConnectionParent{
             try {
                 while (true) {
                     String req = this.inText.readLine();
-                    DstoreLogger.getInstance().messageReceived(this.socket, req);
-                    Token reqToken = Tokenizer.getToken(req);
-                    if (reqToken != null) {
-                        //Have to put handle request in new thread since many controller threads are trying to
-                        //communicate with this one connection, so we want to handle all their requests
-                        //at the same time. This is different to the client connection, as there is only one client
-                        //thread per connection there, so we can deal with requests sequentially
-                        new Thread (() -> {
-                            this.handleRequest(reqToken);
-                        }).start();
+                    if (req != null) {
+                        DstoreLogger.getInstance().messageReceived(this.socket, req);
+                        Token reqToken = Tokenizer.getToken(req);
+                        if (reqToken != null) {
+                            //Have to put handle request in new thread since many controller threads are trying to
+                            //communicate with this one connection, so we want to handle all their requests
+                            //at the same time. This is different to the client connection, as there is only one client
+                            //thread per connection there, so we can deal with requests sequentially
+                            new Thread(() -> {
+                                this.handleRequest(reqToken);
+                            }).start();
+                        } else {
+                            System.out.println("### ERROR ###   Malformed input received on port " + this.socket.getLocalPort() +
+                                    " from port " + this.socket.getPort());
+                        }
                     } else {
-                        System.out.println("### ERROR ###   Malformed input received on port " + this.socket.getLocalPort() +
-                                " from port " + this.socket.getPort());
+                        this.dstore.end();
                     }
                 }
             } catch (IOException e) {
                 System.out.println("### ERROR ###  Dstore lost connection to controller");
+                this.dstore.end();
             }
         }).start();
     }
@@ -72,7 +77,17 @@ public class DstoreToControllerConnection extends ConnectionParent{
                 message.append(" ").append(f);
             }
             this.sendMessageToController(message.toString());
+        } else if (reqToken instanceof RebalanceToken) {
+            this.handleRebalance((RebalanceToken) reqToken);
         }
+    }
+
+    private void handleRebalance(RebalanceToken rebalanceToken) {
+        this.handleSendingToDstores(rebalanceToken.filesToSend);
+        for (String fileToRemove : rebalanceToken.filesToRemove) {
+            this.dstore.removeFile(fileToRemove);
+        }
+        this.sendMessageToController(Protocol.REBALANCE_COMPLETE_TOKEN);
     }
 
     public void sendMessageToController(String msg) {
@@ -80,4 +95,44 @@ public class DstoreToControllerConnection extends ConnectionParent{
         this.outText.flush();
         DstoreLogger.getInstance().messageSent(this.socket, msg);
     }
+
+    private void handleSendingToDstores(ArrayList<FileToSend> filesToSend) {
+        try {
+            for (FileToSend file : filesToSend) {
+                for (int port : file.dStores) {
+                    Socket s = new Socket(InetAddress.getLocalHost(), port);
+                    PrintWriter storeOutText = new PrintWriter(new BufferedOutputStream(s.getOutputStream()));
+                    BufferedReader storeInText = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    OutputStream storeOutData = s.getOutputStream();
+
+                    int filesize = this.dstore.getFilesize(file.filename);
+                    if (filesize != -1) {
+
+                        String rebalanceStoreMessage = Protocol.REBALANCE_STORE_TOKEN + " " + file.filename + " " + filesize;
+                        storeOutText.println(rebalanceStoreMessage);
+                        storeOutText.flush();
+                        DstoreLogger.getInstance().messageSent(s, rebalanceStoreMessage);
+
+                        String reply = storeInText.readLine();
+                        if (reply != null) {
+                            DstoreLogger.getInstance().messageReceived(s, reply);
+                            Token token = Tokenizer.getToken(reply);
+
+                            if (token instanceof AckToken) {
+                                byte[] fileData = this.dstore.loadDataFromFile(file.filename);
+                                if (fileData != null) {
+                                    storeOutData.write(fileData);
+                                    storeOutData.flush();
+                                }
+                            }
+                        }
+                    }
+                    s.close();
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("### ERROR ###   Could not connect to Dstore when rebalancing");
+        }
+    }
+
 }

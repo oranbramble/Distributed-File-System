@@ -26,7 +26,7 @@ public class ClientMain {
                 if (!end) {
                     // If not quitting, run command using Client object
                     // args[0] are the arguments 'cport' and 'timeout' for Client
-                    new Client().run(s.nextLine(), args[0]);
+                    new Client().run(line, args[0]);
                 }
             } catch (IOException e) {
                 System.out.println("ERROR");

@@ -1,24 +1,24 @@
 package DStore;
 
-import ConnectionParent.ConnectionParent;
-import Loggers.DstoreLogger;
-import Loggers.Protocol;
-import Tokenizer.*;
-
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.util.Arrays;
+
+import Tokenizer.*;
+import Loggers.DstoreLogger;
+import Loggers.Protocol;
+import ConnectionParent.ConnectionParent;
 
 public class DstoreClientConnection extends ConnectionParent {
 
-    private Dstore dStore;
-    private int controllerPort;
-    private int timeout;
+    private final Dstore dStore;
+    private final int timeout;
 
-    public DstoreClientConnection(Socket s, Dstore dStore, int controllerPort, int timeout) throws IOException {
+    public DstoreClientConnection(Socket s, Dstore dStore, int timeout) throws IOException {
         super(s);
         this.dStore = dStore;
-        this.controllerPort = controllerPort;
         this.timeout = timeout;
     }
 
@@ -27,17 +27,23 @@ public class DstoreClientConnection extends ConnectionParent {
         try {
             while (true) {
                 String req = this.inText.readLine();
-                DstoreLogger.getInstance().messageReceived(this.socket, req);
-                Token reqToken = Tokenizer.getToken(req);
-                if (reqToken != null) {
-                    boolean ifBreak = this.handleRequest(reqToken);
-                    if (ifBreak) {break;}
-                } else {
-                    System.out.println("### ERROR ###   Malformed input received on port " + this.socket.getLocalPort() +
-                            " from port " + this.socket.getPort());
+                if (req != null) {
+                    DstoreLogger.getInstance().messageReceived(this.socket, req);
+                    Token reqToken = Tokenizer.getToken(req);
+                    if (reqToken != null) {
+                        boolean ifBreak = this.handleRequest(reqToken);
+                        if (ifBreak) {
+                            break;
+                        }
+                    } else {
+                        System.out.println("### ERROR ###   Malformed input received by Dstore from Client");
+                    }
+                }else {
+                    break;
                 }
             }
         } catch (IOException e) {
+            System.out.println("### ERROR ### Error handling Dstore request from Clinet");
         }
         try {
             this.socket.close();
@@ -71,6 +77,8 @@ public class DstoreClientConnection extends ConnectionParent {
                 this.outData.write(fileData);
                 this.outData.flush();
             }
+        } else if (reqToken instanceof RebalanceStoreToken) {
+            this.handleRebalance(reqToken);
         }
         return false;
     }
@@ -78,8 +86,8 @@ public class DstoreClientConnection extends ConnectionParent {
     private void sendToClient(String message, Token reqReceivedToken) {
         if (reqReceivedToken instanceof StoreToken) {
         }
-        outText.println(message);
-        outText.flush();
+        this.outText.println(message);
+        this.outText.flush();
         DstoreLogger.getInstance().messageSent(this.socket, message);
     }
 
@@ -94,11 +102,25 @@ public class DstoreClientConnection extends ConnectionParent {
             return bytes;
         } catch (SocketException e) {
             System.out.println("--- TIMEOUT ---   Dstore (port:" + this.socket.getLocalPort() + ") timed out waiting" +
-                               " for file data from client (port:" + this.socket.getPort());
+                    " for file data from client (port:" + this.socket.getPort());
             return null;
         } catch (IOException e) {
             System.out.println("### ERROR ###   Connection to client lost when Dstore expecting file data");
             return null;
+        }
+    }
+
+    private void handleRebalance(Token reqToken) throws IOException {
+        try {
+            RebalanceStoreToken t = ((RebalanceStoreToken) reqToken);
+            this.outText.println(Protocol.ACK_TOKEN);
+            this.outText.flush();
+            this.socket.setSoTimeout(this.timeout);
+            byte[] fileData = this.inData.readNBytes(t.filesize);
+            this.socket.setSoTimeout(0);
+            this.dStore.storeToFile(t.filename, fileData);
+        } catch (SocketTimeoutException timeout) {
+            System.out.println("--- TIMEOUT ---   Dstore timed out waiting for file_content from other Dstore during rebalance");
         }
     }
 
