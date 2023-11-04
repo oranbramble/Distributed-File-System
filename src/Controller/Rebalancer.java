@@ -9,6 +9,7 @@ import IndexManager.*;
 
 public class Rebalancer {
 
+    // How long to wait for communication from other components before timing out
     private final int timeout;
     //Maps Dstore port to all the files stored on that port
     private final ConcurrentHashMap<Integer, ArrayList<String>> filesOnDstore;
@@ -27,6 +28,11 @@ public class Rebalancer {
     // Maps from a filename (which exists on the file index) to if that file is actually stored on the Dstores
     private final HashMap<String, Boolean> ifFileStoredMap;
 
+    /**
+     * Constructor
+     * @param timeout : time to wait before timing out (milliseconds)
+     * @param fileIndex : Current fileIndex being used by the Controller to manage all the files on the system
+     */
     public Rebalancer(int timeout, IndexManager fileIndex) {
         this.timeout = timeout;
         this.filesOnDstore = new ConcurrentHashMap<>();
@@ -48,6 +54,18 @@ public class Rebalancer {
      *          to the Dstore in order to carry out the rebalancing.
      */
     public ConcurrentHashMap<Integer, RebalanceInstruction> rebalance(Map<Integer, ControllerToDStoreConnection> dstoreConnectionMap, int R) {
+        // I will explain the logic of this rebalance operation here
+        // First, generates an index of all files stored on each Dstore
+        // Then, it checks if each file is stored exactly R times.
+        // If not, record the file and Dstore as either a fileToRemove or fileToStore depending on more or less needed of file
+        // Next, 3 methods are used to generate instructions which would adjust these files so that they are all stored
+        // R times
+        // Finally, run method to generate instructions to balance Dstores (even though all files are stored R times does not
+        // mean they are evenly spread, so this method addresses that).
+        // Through the rebalancing methods, instructions that are to be sent to Dstores to carry out the reblancing
+        // are saved to the object. These instructions are then returned at the end of this method in the form of a map
+        // which has keys of Dstore port numbers mapping to the instructions the Dstores need to be sent
+
         // Creates copy of list of all files on fileIndex, and assumes there are not actually stored on Dstores
         for (String filename : this.filesIndex.getStoredFilenames()) {
             this.ifFileStoredMap.put(filename, false);
@@ -73,20 +91,30 @@ public class Rebalancer {
                 this.filesToStore.put(f, R - f.getDstoresStoredOn().size());
             }
         }
-
+        // Methods that ensure each file is stored R times, by working out which Dstores need to be sent STORE instructions
+        // (meaning send file to another Dstore) and which need to be sent REMOVE instructions (meaning remove the file
+        // from the Dstore the instruction is sent to)
         this.getAllFilesNeededForDstores(ceil);
         this.createStoreFileInstructions();
         this.createRemoveFileInstructions(floor);
+
+        // Rebalances Dstores so that files are evenly spread across all Dstores
         this.rebalanceFiles(ceil,floor);
 
-
+        // Returns map of instructions
         return this.dstoreInstruction;
 
     }
 
+
+
+
     /*
     GENERATING STORE INSTRUCTIONS FOR FILES STORED LESS THAN R TIMES
      */
+
+
+
 
     private void createStoreFileInstructions() {
         //DEEP COPYING filesOnDStore
@@ -179,9 +207,12 @@ public class Rebalancer {
 
 
 
+
     /*
     GENERATING REMOVE INSTRUCTIONS FOR FILES STORED MORE THAN R TIMES
      */
+
+
 
 
     private void createRemoveFileInstructions(double floor) {
@@ -218,7 +249,7 @@ public class Rebalancer {
 
     /**
      * Method which checks if a file should be removed from a specific Dstore during rebalance, based on if it is
-     * allowed by the rabalance rules (does the Dstore stay above the floor level of files?)
+     * allowed by the rEbalance rules (does the Dstore stay above the floor level of files?)
      * It also updates the indexes assuming the file will actually be removed later in the operation
      * @param dstore: Port number of the Dstore we are checking
      * @param file: File object that we may be removing
@@ -621,7 +652,7 @@ public class Rebalancer {
         // Checks if file exists on file index but no longer exists on Dstores.
         // If this is the case, file is removed from the file index
         for (String filename : this.ifFileStoredMap.keySet()) {
-            if (this.ifFileStoredMap.get(filename) == false) {
+            if (!this.ifFileStoredMap.get(filename)) {
                 this.filesIndex.removeFileFromIndex(filename);
             }
         }
