@@ -1,8 +1,5 @@
 package DStore;
 
-import Loggers.DstoreLogger;
-import Loggers.Logger;
-
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 

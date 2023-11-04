@@ -252,53 +252,117 @@ public class Rebalancer {
         return false;
     }
 
+
+
+
     /*
     BALANCING DSTORES WHEN ALL FILES ARE STORED R TIMES
      */
 
+
+
+
+    /**
+     * Method for rebalancing files on Dstores when all files are stored R times but not evenly spread
+     * @param ceil : max number of files allowed on a Dstore
+     * @param floor : min number of files allowed on a Dstore
+     */
     private void rebalanceFiles(double ceil, double floor) {
+        // This method works by generating 2 lists of Dstores which can be used for rebalancing.
+        // One list (dstoresNeedingFiles) contains a list of Dstores (and number of files to potentially add) which
+        // files could potentially be added to, if another Dstore currently stores too many files
+        // The other list (dstoresLosingFiles) contains a list of Dstores (and number of files to potentially remove)
+        // whose file's could potentially be moved to another Dstore, if that Dstore does not currently store enough
+        // files.
+        //
+        // Then, it works by rebelancing files by moving ones from the most stored (max of dstoresLosingFiles) to the
+        // least stored (max of dstoresNeedingFiles). It does this in a while loop, which on start of the loop
+        // and each iteration, it checks if all Dstores have been successfully balanced, meaning this loop will not
+        // even run if nothing needs to be done. But if some files need to be moved, it will run until all Dstores are
+        // balanced
+
         //GENERATES LISTS OF DSTORES THAT NEED FILES AND NEED TO LOSE FILES
         //Each inner list is a 2 length list where index 0 is dstore port and index 1 is number of files need to remove/add
         ArrayList<ArrayList<Integer>> dstoresNeedingFiles = new ArrayList<>();
         ArrayList<ArrayList<Integer>>  dstoresLosingFiles = new  ArrayList<>();
+        // For every Dstore
         for (Integer dstore : this.filesOnDstore.keySet()) {
+            // If number of files on Dstore is greater than the minimum allowed
             if (this.filesOnDstore.get(dstore).size() > floor) {
-                ArrayList<Integer> dstoreToNumberOfFilesToRemove = new ArrayList<>(Arrays.asList(dstore, (int) (this.filesOnDstore.get(dstore).size() - floor)));
+                // 2 element list of Dstore port and number of files to remove from that Dstore
+                ArrayList<Integer> dstoreToNumberOfFilesToRemove =
+                        new ArrayList<>(Arrays.asList(dstore, (int) (this.filesOnDstore.get(dstore).size() - floor)));
                 dstoresLosingFiles.add(dstoreToNumberOfFilesToRemove);
+            // If number of files on Dstore is less than the maximum allowed
             } else if (this.filesOnDstore.get(dstore).size() < ceil) {
-                ArrayList<Integer>  dstoreToNumberOfFilesNeeded = new ArrayList<>(Arrays.asList(dstore, (int) (ceil - this.filesOnDstore.get(dstore).size())));
+                // 2 element list of Dstore port and number of files to add to that Dstore
+                ArrayList<Integer>  dstoreToNumberOfFilesNeeded =
+                        new ArrayList<>(Arrays.asList(dstore, (int) (ceil - this.filesOnDstore.get(dstore).size())));
                 dstoresNeedingFiles.add(dstoreToNumberOfFilesNeeded);
             }
         }
 
+        // Starts rebalancing loop
+        //
+        // Logic works by if something needs rebalancing, it does not go through each Dstore and pick out each Dstore
+        // that needs to be rebalanced individually. Instead, it just checks if all Dstores are balanced, and if not
+        // then it just moves files from the Dstore with the most files stored to the Dstore wiit the least files
+        // stored (if it does not already store that file). This is done until all Dstores are balanced, or until
+        // there are no more potential moves that would improve it (no dstores left which can store files or none left
+        // that can send files)
         while (dstoresNeedingFiles.size() != 0 && dstoresLosingFiles.size() != 0 && !(this.checkIfBalanced(ceil, floor))) {
+            // Sorts by Dstores with the least files stored
             dstoresNeedingFiles = this.sortDstoreLists(dstoresNeedingFiles);
+            // Gets Dstore with the least number of files
             ArrayList<Integer> dstoreThatNeedsFiles = dstoresNeedingFiles.get(0);
+            // If this Dstore can store any more files without becoming unbalanced (not above ceiling)
             if (dstoreThatNeedsFiles.get(1) != 0) {
                 int counter = 0;
+                // Set up a new inner loop to loop through Dstores to potentially remove files from
                 while (counter <= dstoresLosingFiles.size()- 1) {
+                    // Sort by Dstores with the most files stored
                     dstoresLosingFiles = this.sortDstoreLists(dstoresLosingFiles);
+                    // Gets Dstore with most number of files
                     ArrayList<Integer> dstoreRemovingFilesFrom = dstoresLosingFiles.get(0);
+                    // If this Dstore can send any more files without becoming unbalanced (not below floor)
                     if (dstoreRemovingFilesFrom.get(1) != 0) {
+                        // Gets a list of files on this Dstore
                         ArrayList<String> filesToBeSent = new ArrayList<>(this.filesOnDstore.get(dstoreRemovingFilesFrom.get(0)));
+                        // For every file on the Dstore with the most files stored
                         for (String filename : filesToBeSent) {
+                            // If the Dstore with the least number of files does not contain the file to potentially send
                             if (!this.filesOnDstore.get(dstoreThatNeedsFiles.get(0)).contains(filename)) {
+                                // Checks if either Dstore has reached limit on how many files can send or receive
+                                // without becoming unbalanced. If so, break and look at next Dstore to send files
                                 if (dstoreRemovingFilesFrom.get(1) == 0 || dstoreThatNeedsFiles.get(1) == 0) {
                                     break;
                                 }
-                                this.addMoveFileInstruction(dstoreThatNeedsFiles.get(0), dstoreRemovingFilesFrom.get(0), filename);
+                                // If passed the checks, instruction created to send file from Dstore with most number of
+                                // files to the Dstore with the least number of files
+                                this.addMoveFileInstruction(dstoreThatNeedsFiles.get(0),
+                                        dstoreRemovingFilesFrom.get(0), filename);
 
+                                // Updates the counters which hold how many files each Dstore can gain or lose without
+                                // becoming unbalanced.
+
+                                // Updating Dstore counters which can gain files
                                 Integer numberOfFilesToAdd = dstoreThatNeedsFiles.get(1) - 1;
                                 dstoreThatNeedsFiles.remove(1);
                                 dstoreThatNeedsFiles.add(numberOfFilesToAdd);
-
+                                // Updating Dstore counters which can lose files
                                 Integer numberOfFilesToRemove = dstoreRemovingFilesFrom.get(1) - 1;
                                 dstoreRemovingFilesFrom.remove(1);
                                 dstoreRemovingFilesFrom.add(numberOfFilesToRemove);
+
+                                // If we have 'sent' a file from one Dstore to another, break out of the loop as need
+                                // to re-sort the lists to find new Dstore with max and min files stored.
                                 break;
                             }
                         }
                     }
+                    // Checks if some Dstores have reached maximum/minimum capacity and cannot receive/send any more
+                    // files. If so, remove them from the lists to check.
+
                     if (dstoreRemovingFilesFrom.get(1) == 0) {
                         dstoresLosingFiles.remove(0);
                         break;
@@ -310,6 +374,7 @@ public class Rebalancer {
                         break;
                     }
                 }
+            // Remove the first element if it cannot send any more files
             } else {
                 dstoresNeedingFiles.remove(0);
             }
@@ -333,6 +398,12 @@ public class Rebalancer {
         return sorted;
     }
 
+    /**
+     * Method to check if all Dstores are balanced (floor <= number of files stored <= ceil)
+     * @param ceil : max number of files allowed on a Dstore
+     * @param floor : minimum number of files allowed on a Dstore
+     * @return boolean : true if all Dstores balanced, false if not
+     */
     private boolean checkIfBalanced(double ceil, double floor) {
         boolean ifBalanced = true;
         for (Integer dstore : this.filesOnDstore.keySet()) {
@@ -344,6 +415,7 @@ public class Rebalancer {
         return ifBalanced;
     }
 
+
     private void addMoveFileInstruction(Integer dstoreNeedingFile, Integer dstoreLosingFile, String filename) {
         this.dstoreInstruction.get(dstoreLosingFile).addFileToSend(filename, dstoreNeedingFile);
         this.dstoreInstruction.get(dstoreLosingFile).addFileToRemove(filename);
@@ -353,9 +425,15 @@ public class Rebalancer {
         this.filesIndex.removeDstoreForFile(filename, dstoreLosingFile);
     }
 
+
+
+
     /*
     SORTING MAP OF DSTORES TO FILES
      */
+
+
+
 
     /**
      * Method which sorts the Dstores based on how many files they store
@@ -384,23 +462,55 @@ public class Rebalancer {
         return sorted;
     }
 
+
+
+
     /*
     CEIL AND FLOOR
      */
 
+
+
+
+    /**
+     * Method to generate the maximum number of files allowed on a Dstore
+     * @param F : Number of different files stored on system
+     * @param R : Replication Factor, how mnay times a file should be replicated over the Dstores
+     * @param D : Number of Dstores
+     * @return double : max number of files per Dstore
+     */
     private double getCeil(int F, int R, int D) {
         return Math.ceil(((double) R * (double) F) / (double) D);
     }
 
+    /**
+     * Method to generate the minimum number of files allowed on a Dstore
+     * @param F : Number of different files stored on system
+     * @param R : Replication Factor, how mnay times a file should be replicated over the Dstores
+     * @param D : Number of Dstores
+     * @return double : min number of files per Dstore
+     */
     private double getFloor(int F, int R, int D) {
         return Math.floor(((double) R * (double) F) / (double) D);
     }
 
 
+
+
     /*
-    LISTING
+    Sending LIST operations to Dstores
      */
 
+
+
+
+    /**
+     * Method which oversees the sending of the LIST messages to the Dstores
+     * LIST messages are sent to Dstores, then wait for the return messages containing the LIST of filenames
+     * on each Dstore and update the indexes in the Rebalancer object.
+     * @param dstoreConnectionMap : Map from Dstore port numbers to its associated ControllerToDstoreConnection obj
+     * @return boolean : If the program did not time out while waiting for LIST return messages from Dstores
+     */
     public boolean getFilesOnDstores(Map<Integer, ControllerToDStoreConnection> dstoreConnectionMap) {
         //Sends lists to all Dstores
         new Thread(() -> {
@@ -422,6 +532,12 @@ public class Rebalancer {
         return this.listenForLists();
     }
 
+    /**
+     * Method called when a list is received in the ControllerToDStoreConneciton
+     * It updates the Reblancer's list of files on each Dstore
+     * @param fileList : list of fileneames returned from the Dstore
+     * @param portReceivedFrom : port number of Dstore we received file list from
+     */
     public void listReceived(ArrayList<String> fileList, Integer portReceivedFrom) {
         if (this.filesOnDstore.containsKey(portReceivedFrom)) {
             System.out.println("### ERROR ###   Rebalance listing: Multiple lists received from same port");
@@ -443,19 +559,15 @@ public class Rebalancer {
      * E.g. If File F has Dstore D in it's list but the D's LIST command does not contain F, we remove
      *      D from the list of Dstores associated with F. (and vice versa if D not in F's list but is actually stored
      *      in D)
-     * @param fileList
-     * @param dstorePort
+     * @param fileList : list of filenames on Dstore
+     * @param dstorePort : port of Dstore we are checking for files on
      */
     public synchronized boolean updateFileIndex(ArrayList<String> fileList, Integer dstorePort) {
         //Checks if the file is already in the file index
         for (String filename : fileList) {
-            System.out.println("FLAG " + filename);
             this.ifFileStoredMap.put(filename, true);
             boolean fileNotYetStored = true;
-            System.out.println(this.filesIndex.getFileObjects());
             for (DstoreFile fileStored : this.filesIndex.getFileObjects()) {
-                System.out.println(fileStored.getFilename());
-                System.out.println(filename);
                 //If file returned from dstore list is already in our index, we know we don't have to
                 //add it to the index as it is already stored
                 if (fileStored.getFilename().equals(filename)) {
@@ -487,6 +599,12 @@ public class Rebalancer {
         return true;
     }
 
+    /**
+     * Method called when waiting for LIST return messages from Dstores.
+     * It holds for the timeout period and if within that time period all LIST's are received,
+     * it continues with execution
+     * @return boolean : if method has not timed out
+     */
     public boolean listenForLists() {
         boolean ifNotTimedOut = true;
         //Waits for all lists back from Dstores within a certain timeout period
