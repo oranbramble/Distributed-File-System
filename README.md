@@ -22,8 +22,7 @@ However, the layout and communication concepts are the same for if it was spread
 
 <p align="center">
   <br/>
-  <img src="https://github.com/oranbramble/Distributed-File-System/assets/56357864/18f6fba9-d74a-4164-8b69-6a81f6069f8d">
-
+  <img src="https://github.com/oranbramble/Distributed-File-System/assets/56357864/9c639547-c953-43c9-8f95-89144ae1e731">
 </p>
 
 ## <br/>Networking
@@ -129,8 +128,9 @@ To run, clone this git repositroy using the git command in the Command Line Inte
 git clone https://github.com/oranbramble/Distributed-File-System.git
 ```
 
-![cloning](https://github.com/oranbramble/Distributed-File-System/assets/56357864/ace782b8-91f6-4434-9c69-be65ceca319f)
+![cloning](https://github.com/oranbramble/Distributed-File-System/assets/56357864/df81ff00-956a-473d-aab6-891a3e9f6316)
 > Cloning of the repository as shown on a Windows Command Line
+
 
 
 </br> 
@@ -140,7 +140,7 @@ Once cloned, multiple different Command Line Interface windows must be openend, 
 
 <br/>
 
-![CMD windows](https://github.com/oranbramble/Distributed-File-System/assets/56357864/231af2d8-4250-40ab-90ca-5b8a4ca73852)
+![CMD windows](https://github.com/oranbramble/Distributed-File-System/assets/56357864/76d10b20-21b0-4f5f-81b5-bbbfaf3df5ab)
 > Showing the `Controller`, `DstoreMain` and `ClientMain` running on separate Windows CMD programs. This is how this program has to be run, it cannot be used all on one Command Line program.
 
 </br>
@@ -154,7 +154,7 @@ java Controller/Controller cport R timeout rebalance_period
 
 </br>
 
-![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/5d509138-a992-498b-85f4-8610be51a5e5)
+![Controller start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/d9f13658-8e39-4f7b-8fa3-ea7b9dc1e67d)
 > Starting the `Controller` component and showing an immediate Rebalance operation with 0 `Dstores` connected
 
 </br> 
@@ -174,7 +174,7 @@ java DStore/DstoreMain cport timeout N
 
 </br>
 
-![DstoreMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/733d6542-a40e-4093-95a7-e670fc182bc9)
+![DstoreMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/13355db7-27dd-401f-9835-ead7d863c09b)
 > `DstoreMain` initialisation with N=3, so 3 `Dstores` are started and connected to the `Controller` on port 1000
 
 </br>
@@ -191,7 +191,7 @@ java Client/ClientMain cport timeout
 ```
 </br>
 
-![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/6ea5d4fe-f2e9-42da-a224-8565966098c4)
+![ClientMain start](https://github.com/oranbramble/Distributed-File-System/assets/56357864/9dcfb5ad-a294-4ead-bece-11aeb5e32e79)
 > The starting of `ClientMain` which doesn't connect immediately to the `Controller`, as this is done by the individual `Clients` when a command is typed.
 
 
