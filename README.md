@@ -1,5 +1,19 @@
 # Distributed-File-System
 
+---
+## Contents
+- **[Introduction](#Introduction)**
+- **[Networking](#Networkin)**
+- **[Componenets](#Componenets)**
+   * **[Controller](#Controller)**
+   * **[Client](#Client)**
+   * **[Dstore](#Dstore)**
+- **[How To Run](#How-To-Run)**
+   * **[Starting Up](#Starting-Up)**
+   * **[Client Commands](#Client-Commands)**
+---
+
+## Introduction
 
 <br/>This project is a distributed storage system, which is used to **store files over multiple locations** for security and backup reasons. 
 The concept is that any number of concurrent _**Clients**_ communicate with a _**Controller**_ and the Data Stores (_**Dstores**_) to either store a file, remove a file, load a file from storage or list all files.
