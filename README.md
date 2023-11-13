@@ -3,8 +3,8 @@
 ---
 ## Contents
 - **[Introduction](#Introduction)**
-- **[Networking](#Networkin)**
-- **[Componenets](#Componenets)**
+- **[Networking](#Networking)**
+- **[Componenets](#Components)**
    * **[Controller](#Controller)**
    * **[Client](#Client)**
    * **[Dstore](#Dstore)**
